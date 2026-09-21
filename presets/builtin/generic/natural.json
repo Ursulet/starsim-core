@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "generic.natural",
+  "targetId": "generic",
+  "name": "Natural",
+  "description": "Conservative natural engineering starting point for user-selected generic data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.02
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 1
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1,
+        "green": 1,
+        "blue": 1
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 1
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 55,
+    "detail": 58,
+    "noiseReduction": 30,
+    "color": 48,
+    "brightness": 0,
+    "contrast": 5,
+    "waveletGains": [8, 5, 3, 1.5, 1, 1]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

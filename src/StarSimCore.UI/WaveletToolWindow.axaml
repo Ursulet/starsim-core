@@ -1,0 +1,199 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StarSimCore.UI.ViewModels"
+        xmlns:loc="using:StarSimCore.UI.Localization"
+        x:Class="StarSimCore.UI.WaveletToolWindow"
+        x:DataType="vm:WaveletToolViewModel"
+        Title="{loc:Localize Key=Wavelets.ToolTitle}"
+        Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
+        Width="900"
+        Height="820"
+        MinWidth="780"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <!-- Header -->
+    <Border Grid.Row="0" Background="#0E171F" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,12">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <TextBlock Text="🌌" FontSize="22" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="{loc:Localize Key=Wavelets.Title}" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Text="{loc:Localize Key=Category.Detail}" Classes="muted" FontSize="11" />
+        </StackPanel>
+        <CheckBox Grid.Column="2" IsChecked="{Binding Module.IsEnabled}" Content="{loc:Localize Key=ToolWindow.Enabled}" Margin="0,0,12,0" VerticalAlignment="Center" />
+        <Button Grid.Column="3" Content="{loc:Localize Key=Wavelets.ResetAll}" Command="{Binding ResetWaveletsCommand}" ToolTip.Tip="{loc:Localize Key=Wavelets.ResetAll.Tip}" />
+      </Grid>
+    </Border>
+
+    <!-- Sub-header: Mode Selector & Global Controls -->
+    <Border Grid.Row="1" Background="#0A1117" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+      <Grid RowDefinitions="Auto,Auto">
+        <!-- View Mode Switcher: Classic (Default) vs Advanced -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+          <Border Background="#05080C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="2">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <Button Classes="mode" Classes.active="{Binding IsClassicView}" Content="{loc:Localize Key=Wavelets.Mode.Classic}" Command="{Binding SelectClassicViewCommand}" Padding="14,4" FontSize="12" />
+              <Button Classes="mode" Classes.active="{Binding IsAdvancedView}" Content="{loc:Localize Key=Wavelets.Mode.Advanced}" Command="{Binding SelectAdvancedViewCommand}" Padding="14,4" FontSize="12" />
+            </StackPanel>
+          </Border>
+
+          <CheckBox Grid.Column="2" IsChecked="{Binding IsLinked}" Content="{loc:Localize Key=Wavelets.Linked}" VerticalAlignment="Center" ToolTip.Tip="{loc:Localize Key=Wavelets.Linked.Tip}" />
+        </Grid>
+
+        <!-- Global Strength & Initial Gaussian Width -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,16,*">
+          <Grid Grid.Column="0" ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Text="{loc:Localize Key=Wavelets.GlobalStrength}" Classes="secondary" FontSize="11" VerticalAlignment="Center" Width="120" TextTrimming="CharacterEllipsis" />
+            <Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding GlobalStrength}" Margin="6,0" VerticalAlignment="Center" />
+            <TextBox Grid.Column="2" Classes="numeric" Width="50" Text="{Binding GlobalStrength, StringFormat={}{0:0.0#}}" IsReadOnly="True" VerticalAlignment="Center" />
+          </Grid>
+          <Grid Grid.Column="2" ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Text="{loc:Localize Key=Wavelets.InitialWidth}" Classes="secondary" FontSize="11" VerticalAlignment="Center" Width="110" TextTrimming="CharacterEllipsis" />
+            <Slider Grid.Column="1" Minimum="{Binding InitialLayerWidthMinimum}" Maximum="{Binding InitialLayerWidthMaximum}" Value="{Binding InitialLayerWidth}" Margin="6,0" VerticalAlignment="Center" />
+            <TextBox Grid.Column="2" Classes="numeric" Width="50" Text="{Binding InitialLayerWidth, StringFormat={}{0:0.0#}}" IsReadOnly="True" VerticalAlignment="Center" />
+          </Grid>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <!-- Main Scrollable Area -->
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="16,12" Spacing="10">
+        <!-- CLASSIC VIEW: 6 Prominent Layer Sliders -->
+        <StackPanel Spacing="10" IsVisible="{Binding IsClassicView}">
+          <ItemsControl ItemsSource="{Binding ClassicLayers}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WaveletClassicLayerViewModel">
+                <Border Classes="module-card" Margin="0,0,0,8" Padding="14,10">
+                  <Grid RowDefinitions="Auto,Auto,Auto">
+                    <!-- Layer Header: Prominent Number & Name + Solo + Reset -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,4">
+                      <Border Width="24" Height="24" CornerRadius="6" Background="#142634" BorderBrush="#254760" BorderThickness="1" Margin="0,0,8,0">
+                        <TextBlock Text="{Binding LayerNumber}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <TextBlock Grid.Column="1" Text="{Binding LayerName}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                      
+                      <!-- Solo Layer Preview Toggle -->
+                      <ToggleButton Grid.Column="2" IsChecked="{Binding IsSolo}" Content="{loc:Localize Key=Wavelets.Solo}" Padding="10,3" FontSize="11" Margin="0,0,8,0" ToolTip.Tip="{loc:Localize Key=Wavelets.Solo.Tip}" />
+                      
+                      <!-- Reset Layer -->
+                      <Button Grid.Column="3" Classes="toolbar icon" Content="↺" Command="{Binding ResetCommand}" Width="26" Height="26" MinWidth="26" FontSize="11" ToolTip.Tip="{loc:Localize Key=Wavelets.ResetLayer.Tip}" />
+                    </Grid>
+
+                    <!-- Localized Layer Description / Tooltip Hint -->
+                    <TextBlock Grid.Row="1" Text="{Binding LayerHelp}" Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                    <!-- Slider & Stepper Row -->
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                      <Button Grid.Column="0" Classes="nudge" Content="−" Command="{Binding NudgeDownCommand}" ToolTip.Tip="{loc:Localize Key=Wavelets.NudgeDown.Tip}" Margin="0,0,6,0" />
+                      <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding SliderValue}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <Button Grid.Column="2" Classes="nudge" Content="+" Command="{Binding NudgeUpCommand}" ToolTip.Tip="{loc:Localize Key=Wavelets.NudgeUp.Tip}" Margin="0,0,8,0" />
+                      <TextBox Grid.Column="3" Classes="numeric" Width="55" Text="{Binding SliderValue, Mode=TwoWay, StringFormat={}{0:0.#}}" HorizontalContentAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- "What are wavelets?" Info Card -->
+          <Expander Header="{loc:Localize Key=Wavelets.Info.Title}" Margin="0,4,0,0">
+            <Border Background="#080E14" CornerRadius="6" Padding="12" Margin="0,4,0,0">
+              <TextBlock Text="{loc:Localize Key=Wavelets.Info.Body}" Classes="secondary" FontSize="11" TextWrapping="Wrap" LineHeight="17" />
+            </Border>
+          </Expander>
+        </StackPanel>
+
+        <!-- ADVANCED VIEW: Full 4 Parameters per Layer -->
+        <StackPanel Spacing="10" IsVisible="{Binding IsAdvancedView}">
+          <Border Classes="module-card" Padding="14,10">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{loc:Localize Key=Wavelets.Diagnostic.Title}" FontWeight="SemiBold" />
+              <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                <TextBlock Text="{loc:Localize Key=Wavelets.Diagnostic.Backend}" Classes="secondary" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding BackendOptions}" SelectedItem="{Binding SelectedBackendOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <TextBlock Grid.Column="2" Text="{loc:Localize Key=Wavelets.Diagnostic.ScaleScheme}" Classes="secondary" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="3" ItemsSource="{Binding ScaleSchemeOptions}" SelectedItem="{Binding SelectedScaleSchemeOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <TextBlock Text="{loc:Localize Key=Wavelets.Diagnostic.LinearStep}" Classes="secondary" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" Minimum="0" Maximum="16" Value="{Binding LinearStepIncrement}" />
+                <TextBox Grid.Column="2" Classes="numeric" Text="{Binding LinearStepIncrement, StringFormat={}{0:0.0#}}" IsReadOnly="True" />
+              </Grid>
+              <Separator IsVisible="{Binding CanExportDiagnostics}" />
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding CanExportDiagnostics}">
+                <TextBlock Text="{Binding DiagnosticStatus}" Classes="muted" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding DiagnosticEncodingOptions}" SelectedItem="{Binding SelectedDiagnosticEncodingOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <Button Grid.Column="2" Classes="primary" Content="{loc:Localize Key=Wavelets.Diagnostic.Export}" Click="ExportDiagnostics_Click" IsEnabled="{Binding !IsExportingDiagnostics}" />
+              </Grid>
+            </StackPanel>
+          </Border>
+          <ItemsControl ItemsSource="{Binding AdvancedLayers}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WaveletAdvancedLayerViewModel">
+                <Border Classes="module-card" Margin="0,0,0,10" Padding="14,10">
+                  <StackPanel Spacing="8">
+                    <!-- Layer Header -->
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                      <Border Width="24" Height="24" CornerRadius="6" Background="#142634" BorderBrush="#254760" BorderThickness="1" Margin="0,0,8,0">
+                        <TextBlock Text="{Binding LayerNumber}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <TextBlock Grid.Column="1" Text="{Binding LayerName}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                      <ToggleButton Grid.Column="2" IsChecked="{Binding IsSolo}" Content="{loc:Localize Key=Wavelets.Solo}" Padding="10,3" FontSize="11" Margin="0,0,8,0" ToolTip.Tip="{loc:Localize Key=Wavelets.Solo.Tip}" />
+                      <Button Grid.Column="3" Content="{loc:Localize Key=Wavelets.ResetLayer}" Command="{Binding ResetLayerCommand}" FontSize="11" Padding="8,3" />
+                    </Grid>
+
+                    <!-- Layer enhancement factor -->
+                    <Grid ColumnDefinitions="120,Auto,*,Auto,Auto" VerticalAlignment="Center">
+                      <TextBlock Text="{loc:Localize Key=Wavelets.Param.EnhancementFactor}" Classes="secondary" FontSize="11" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="nudge" Content="−" Command="{Binding EnhancementFactor.NudgeDownCommand}" Margin="0,0,6,0" />
+                      <Slider Grid.Column="2" Minimum="{Binding EnhancementFactor.Minimum}" Maximum="{Binding EnhancementFactor.Maximum}" Value="{Binding EnhancementFactor.Value}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <Button Grid.Column="3" Classes="nudge" Content="+" Command="{Binding EnhancementFactor.NudgeUpCommand}" Margin="0,0,6,0" />
+                      <TextBox Grid.Column="4" Classes="numeric" Width="55" Text="{Binding EnhancementFactor.Value, Mode=TwoWay, StringFormat={}{0:0.0##}}" HorizontalContentAlignment="Right" />
+                    </Grid>
+
+                    <!-- Gaussian width override -->
+                    <Grid ColumnDefinitions="120,Auto,*,Auto,Auto" VerticalAlignment="Center">
+                      <TextBlock Text="{loc:Localize Key=Wavelets.Param.GaussianWidth}" Classes="secondary" FontSize="11" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="nudge" Content="−" Command="{Binding GaussianWidth.NudgeDownCommand}" Margin="0,0,6,0" />
+                      <Slider Grid.Column="2" Minimum="{Binding GaussianWidth.Minimum}" Maximum="{Binding GaussianWidth.Maximum}" Value="{Binding GaussianWidth.Value}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <Button Grid.Column="3" Classes="nudge" Content="+" Command="{Binding GaussianWidth.NudgeUpCommand}" Margin="0,0,6,0" />
+                      <TextBox Grid.Column="4" Classes="numeric" Width="55" Text="{Binding GaussianWidth.Value, Mode=TwoWay, StringFormat={}{0:0.0##}}" HorizontalContentAlignment="Right" />
+                    </Grid>
+
+                    <!-- Denoise -->
+                    <Grid ColumnDefinitions="120,Auto,*,Auto,Auto" VerticalAlignment="Center">
+                      <TextBlock Text="{loc:Localize Key=Wavelets.Param.Denoise}" Classes="secondary" FontSize="11" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="nudge" Content="−" Command="{Binding Denoise.NudgeDownCommand}" Margin="0,0,6,0" />
+                      <Slider Grid.Column="2" Minimum="{Binding Denoise.Minimum}" Maximum="{Binding Denoise.Maximum}" Value="{Binding Denoise.Value}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <Button Grid.Column="3" Classes="nudge" Content="+" Command="{Binding Denoise.NudgeUpCommand}" Margin="0,0,6,0" />
+                      <TextBox Grid.Column="4" Classes="numeric" Width="55" Text="{Binding Denoise.Value, Mode=TwoWay, StringFormat={}{0:0.0##}}" HorizontalContentAlignment="Right" />
+                    </Grid>
+
+                    <!-- Threshold -->
+                    <Grid ColumnDefinitions="120,Auto,*,Auto,Auto" VerticalAlignment="Center">
+                      <TextBlock Text="{loc:Localize Key=Wavelets.Param.Threshold}" Classes="secondary" FontSize="11" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="nudge" Content="−" Command="{Binding Threshold.NudgeDownCommand}" Margin="0,0,6,0" />
+                      <Slider Grid.Column="2" Minimum="{Binding Threshold.Minimum}" Maximum="{Binding Threshold.Maximum}" Value="{Binding Threshold.Value}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <Button Grid.Column="3" Classes="nudge" Content="+" Command="{Binding Threshold.NudgeUpCommand}" Margin="0,0,6,0" />
+                      <TextBox Grid.Column="4" Classes="numeric" Width="55" Text="{Binding Threshold.Value, Mode=TwoWay, StringFormat={}{0:0.00#}}" HorizontalContentAlignment="Right" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Footer -->
+    <Border Grid.Row="3" Background="#0A1117" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{loc:Localize Key=ToolWindow.PrecisionHint}" Classes="secondary" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" />
+        <Button Grid.Column="1" Content="{loc:Localize Key=ToolWindow.Close}" Click="Close_Click" Classes="command" MinWidth="88" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

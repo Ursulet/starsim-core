@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "venus.strong",
+  "targetId": "venus",
+  "name": "Strong",
+  "description": "Conservative strong engineering starting point for user-selected venus data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0.0125
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.05
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 1
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1,
+        "green": 1,
+        "blue": 1
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 0.925
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 100,
+    "detail": 94,
+    "noiseReduction": 18,
+    "color": 62,
+    "brightness": 0,
+    "contrast": 22,
+    "waveletGains": [30, 36, 28, 14, 6, 2]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

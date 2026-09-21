@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StarSimCore.UI.ViewModels"
+        xmlns:loc="using:StarSimCore.UI.Localization"
+        x:Class="StarSimCore.UI.PerformanceSettingsWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{loc:Localize Key=Performance.Title}"
+        Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
+        Width="640" Height="610" MinWidth="560" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="74,*,56">
+    <Border Classes="panel-header" Padding="18,0">
+      <Grid ColumnDefinitions="Auto,*">
+        <Border Width="40" Height="40" CornerRadius="8" Background="#102B3E" BorderBrush="#245978" BorderThickness="1" Margin="0,0,12,0">
+          <TextBlock Text="⚙" FontSize="20" Foreground="#83CCFA" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+          <TextBlock Text="{loc:Localize Key=Performance.Header}" FontSize="17" FontWeight="SemiBold" />
+          <TextBlock Text="{loc:Localize Key=Performance.Subtitle}" Foreground="#7899B1" FontSize="10.5" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="18,16" Spacing="12">
+        <Border Classes="module-card" Padding="14">
+          <Grid ColumnDefinitions="210,*" RowDefinitions="Auto,Auto" RowSpacing="5">
+            <TextBlock Text="{loc:Localize Key=Performance.Profile}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding PerformanceProfileOptions}" SelectedItem="{Binding SelectedPerformanceProfileOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{loc:Localize Key=Performance.Profile.Help}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </Grid>
+        </Border>
+
+        <Border Classes="module-card" Padding="14">
+          <Grid ColumnDefinitions="210,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
+            <TextBlock Text="{loc:Localize Key=Performance.CpuThreads}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="1" Content="{loc:Localize Key=Common.Automatic}" IsChecked="{Binding UseAutomaticCpuThreads}" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ResolvedCpuThreads}" Classes="secondary" />
+            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,74" IsEnabled="{Binding !UseAutomaticCpuThreads}">
+              <Slider Minimum="1" Maximum="64" Value="{Binding ManualMaxThreads}" />
+              <TextBox Grid.Column="1" Classes="numeric" Width="70" Text="{Binding ManualMaxThreads, Mode=TwoWay}" />
+            </Grid>
+          </Grid>
+        </Border>
+
+        <Border Classes="module-card" Padding="14">
+          <Grid ColumnDefinitions="210,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
+            <TextBlock Text="{loc:Localize Key=Performance.MemoryLimit}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="1" Content="{loc:Localize Key=Common.Automatic}" IsChecked="{Binding UseAutomaticMemoryBudget}" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ResolvedMemoryLimit}" Classes="secondary" />
+            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,74" IsEnabled="{Binding !UseAutomaticMemoryBudget}">
+              <Slider Minimum="0.5" Maximum="64" Value="{Binding ManualMemoryBudgetGb}" />
+              <TextBox Grid.Column="1" Classes="numeric" Width="70" Text="{Binding ManualMemoryBudgetGb, Mode=TwoWay, StringFormat={}{0:0.0}}" />
+            </Grid>
+          </Grid>
+        </Border>
+
+        <Border Classes="module-card" Padding="14">
+          <Grid ColumnDefinitions="210,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+            <TextBlock Text="{loc:Localize Key=Performance.InteractivePreview}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding InteractivePreviewQualityOptions}" SelectedItem="{Binding SelectedInteractivePreviewQualityOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+            <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Content="{loc:Localize Key=Performance.PrioritizeUi}" IsChecked="{Binding PrioritizeUiResponsiveness}" />
+            <CheckBox Grid.Row="2" Grid.ColumnSpan="2" Content="{loc:Localize Key=Performance.ReduceBattery}" IsChecked="{Binding ReduceCpuOnBattery}" />
+            <TextBlock Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding ResourceDiagnostics}" Classes="muted" FontFamily="Consolas" FontSize="9" TextWrapping="Wrap" Margin="0,4,0,0" />
+          </Grid>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2" Background="#07121C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{loc:Localize Key=Performance.Immediate}" Classes="secondary" FontSize="10.5" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="{loc:Localize Key=Common.Close}" Click="Close_Click" Classes="command" MinWidth="82" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>StarSimCore.Domain</AssemblyName>
+    <RootNamespace>StarSimCore.Domain</RootNamespace>
+  </PropertyGroup>
+</Project>
+

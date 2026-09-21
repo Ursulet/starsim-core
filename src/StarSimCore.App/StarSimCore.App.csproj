@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>StarSimCore.App</AssemblyName>
+    <RootNamespace>StarSimCore.App</RootNamespace>
+    <ApplicationIcon>Assets\starsim-core.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <ProjectReference Include="..\StarSimCore.Application\StarSimCore.Application.csproj" />
+    <ProjectReference Include="..\StarSimCore.UI\StarSimCore.UI.csproj" />
+    <ProjectReference Include="..\StarSimCore.Interop\StarSimCore.Interop.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "mars.balanced",
+  "targetId": "mars",
+  "name": "Balanced",
+  "description": "Conservative balanced engineering starting point for user-selected mars data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0.007
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.063
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 0.986
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1.028,
+        "green": 1,
+        "blue": 0.972
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 1.035
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 72,
+    "detail": 72,
+    "noiseReduction": 26,
+    "color": 55,
+    "brightness": 0,
+    "contrast": 12,
+    "waveletGains": [26, 18, 10, 5, 2, 1]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "jupiter.detailed",
+  "targetId": "jupiter",
+  "name": "Detailed",
+  "description": "Conservative detailed engineering starting point for user-selected jupiter data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0.02
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.08
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 0.98
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1.02,
+        "green": 1,
+        "blue": 0.98
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 1.03
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 85,
+    "detail": 82,
+    "noiseReduction": 24,
+    "color": 56,
+    "brightness": 0,
+    "contrast": 16,
+    "waveletGains": [38, 28, 17, 8, 3, 1.5]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

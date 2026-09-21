@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://starsimcore.local/schemas/preset-v1.json",
+  "title": "StarSim Core preset recipe v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "presetId", "targetId", "name", "description", "recipeVersion", "processors", "macros", "compatibility"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "presetId": { "type": "string", "minLength": 3 },
+    "targetId": { "enum": ["jupiter", "saturn", "mars", "venus", "moon", "solar", "generic"] },
+    "name": { "enum": ["Natural", "Balanced", "Detailed", "Strong"] },
+    "description": { "type": "string", "minLength": 10 },
+    "recipeVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "processors": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "enabled", "parameters"],
+        "properties": {
+          "id": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "parameters": { "type": "object", "additionalProperties": { "type": "number" } }
+        }
+      }
+    },
+    "macros": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presetStrength", "detail", "noiseReduction", "color", "brightness", "contrast"],
+      "properties": {
+        "presetStrength": { "type": "number", "minimum": 0, "maximum": 100 },
+        "detail": { "type": "number", "minimum": 0, "maximum": 100 },
+        "noiseReduction": { "type": "number", "minimum": 0, "maximum": 100 },
+        "color": { "type": "number", "minimum": 0, "maximum": 100 },
+        "brightness": { "type": "number", "minimum": -100, "maximum": 100 },
+        "contrast": { "type": "number", "minimum": -100, "maximum": 100 },
+        "waveletGains": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": { "type": "number", "minimum": 0, "maximum": 100 }
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumAppVersion", "colorModels", "requiredProcessors"],
+      "properties": {
+        "minimumAppVersion": { "type": "string" },
+        "colorModels": { "type": "array", "items": { "enum": ["Grayscale", "Rgb"] } },
+        "requiredProcessors": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

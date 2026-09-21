@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StarSimCore.UI.ViewModels"
+        xmlns:loc="using:StarSimCore.UI.Localization"
+        x:Class="StarSimCore.UI.PluginManagerWindow"
+        x:DataType="vm:PluginManagerViewModel"
+        Title="{loc:Localize Key=Plugin.Title}"
+        Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
+        Width="980" Height="760" MinWidth="800" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="82,*,Auto">
+    <Border Classes="panel-header" Padding="18,0">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Border Width="42" Height="42" CornerRadius="8" Background="#102B3E" BorderBrush="#245978" BorderThickness="1" Margin="0,0,12,0">
+          <TextBlock Text="♙" FontSize="23" Foreground="#83CCFA" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+          <TextBlock Text="{loc:Localize Key=Plugin.Header}" FontSize="17" FontWeight="SemiBold" />
+          <TextBlock Text="{loc:Localize Key=Plugin.Subtitle}" Foreground="#7899B1" FontSize="10.5" />
+        </StackPanel>
+        <Border Grid.Column="2" Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="1" CornerRadius="6" Padding="9,5" VerticalAlignment="Center">
+          <TextBlock Text="{loc:Localize Key=Plugin.SecurityBadge}" Foreground="#F5C467" FontSize="9" FontWeight="SemiBold" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="14">
+      <TabItem Header="{loc:Localize Key=Plugin.Tab.Installed}">
+        <Grid Margin="8,12,8,4" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+          <Border Background="#0B1822" BorderBrush="#24445A" BorderThickness="1" CornerRadius="7" Padding="12,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+              <StackPanel Spacing="5">
+                <CheckBox Content="{loc:Localize Key=Plugin.EnableStartup}" IsChecked="{Binding ExternalPluginsEnabled}" />
+                <TextBlock Text="{Binding RuntimeStatus}" Foreground="#83A7C0" FontSize="10" TextWrapping="Wrap" />
+                <TextBlock Text="{loc:Localize Key=Plugin.ChangeRestart}" Classes="muted" FontSize="9.5" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <Button Classes="primary" Content="{loc:Localize Key=Plugin.Install}" Click="InstallPlugin_Click" />
+                <Button Classes="command" Content="{loc:Localize Key=Plugin.OpenFolder}" Command="{Binding OpenPluginFolderCommand}" />
+                <Button Classes="command" Content="{loc:Localize Key=Common.Refresh}" Command="{Binding RefreshCommand}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="1" Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="1" CornerRadius="6" Padding="10,7" IsVisible="{Binding RestartRequired}">
+            <TextBlock Text="{loc:Localize Key=Plugin.RestartBanner}" Foreground="#F5C467" FontSize="10" />
+          </Border>
+
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="8">
+              <Border Background="#08131C" BorderBrush="#203748" BorderThickness="1" CornerRadius="6" Padding="18" IsVisible="{Binding !HasPlugins}">
+                <StackPanel Spacing="5" HorizontalAlignment="Center">
+                  <TextBlock Text="{loc:Localize Key=Plugin.None}" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="{loc:Localize Key=Plugin.NoneHint}" Classes="muted" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Border>
+              <ItemsControl ItemsSource="{Binding Plugins}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:PluginListItemViewModel">
+                    <Border Classes="processor-row" Padding="12,10" Margin="0,0,0,7">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Version}" Foreground="#83A7C0" VerticalAlignment="Center" FontSize="10" />
+                          <Border Background="#102B3E" BorderBrush="#245978" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                            <TextBlock Text="{Binding Status}" Foreground="#83CCFA" FontSize="9" FontWeight="SemiBold" />
+                          </Border>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="{loc:Localize Key=Plugin.Remove}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}" Classes="command" />
+                        <StackPanel Grid.Row="1" Spacing="2">
+                          <TextBlock Text="{Binding ProcessorSummary}" Foreground="#9AB8CC" FontSize="10" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding IdentitySummary}" Foreground="#6F91A8" FontSize="9" TextWrapping="Wrap" IsVisible="{Binding HasIdentity}" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="2" Text="{Binding Details}" Classes="muted" FontSize="9.5" TextWrapping="Wrap" />
+                        <TextBlock Grid.Row="3" Text="{Binding FilePath}" Foreground="#587A91" FontFamily="Consolas" FontSize="8.5" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <TextBlock Text="{Binding StatusText}" Foreground="#8FB2C9" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="{loc:Localize Key=Plugin.OpenLogs}" Command="{Binding OpenLogFolderCommand}" Classes="command" />
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="{loc:Localize Key=Plugin.Tab.Developer}">
+        <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="14" Margin="5,3,12,16">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <StackPanel>
+                <TextBlock Text="{loc:Localize Key=Plugin.Guide.Title}" FontSize="17" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Localize Key=Plugin.Guide.Spec}" Foreground="#83A7C0" FontSize="10" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="{loc:Localize Key=Plugin.Guide.OpenSdk}" Command="{Binding OpenSdkFolderCommand}" Classes="primary" />
+              <Button Grid.Column="2" Content="{loc:Localize Key=Plugin.Guide.OpenTutorial}" Command="{Binding OpenTutorialCommand}" Classes="command" />
+            </Grid>
+
+            <Border Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="1" CornerRadius="7" Padding="12,9">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Security}" Foreground="#F5C467" TextWrapping="Wrap" />
+            </Border>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step1.Title}" Classes="heading" FontSize="14" />
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step1.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step2.Title}" Classes="heading" FontSize="14" />
+              <TextBox IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" MinHeight="92" Text="ssc_plugin_get_info&#10;ssc_plugin_get_processor_def&#10;ssc_plugin_process" />
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step2.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step3.Title}" Classes="heading" FontSize="14" />
+              <TextBox IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" MinHeight="76" Text="cmake -S . -B build -A x64&#10;cmake --build build --config Release" />
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step3.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step4.Title}" Classes="heading" FontSize="14" />
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step4.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step5.Title}" Classes="heading" FontSize="14" />
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step5.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step6.Title}" Classes="heading" FontSize="14" />
+              <TextBlock Text="{loc:Localize Key=Plugin.Guide.Step6.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border Background="#0B1822" BorderBrush="#24445A" BorderThickness="1" CornerRadius="7" Padding="12,9">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{loc:Localize Key=Plugin.Guide.SampleTitle}" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Localize Key=Plugin.Guide.SampleBody}" Foreground="#9AB8CC" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+
+    <Border Grid.Row="2" Background="#07121C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,9">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{loc:Localize Key=Plugin.Footer}" Foreground="#7899B1" VerticalAlignment="Center" FontSize="10" />
+        <Button Grid.Column="1" Content="{loc:Localize Key=Common.Close}" Click="Close_Click" Classes="command" MinWidth="86" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

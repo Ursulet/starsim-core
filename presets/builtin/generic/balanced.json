@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "generic.balanced",
+  "targetId": "generic",
+  "name": "Balanced",
+  "description": "Conservative balanced engineering starting point for user-selected generic data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.035
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 1
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1,
+        "green": 1,
+        "blue": 1
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 1
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 60,
+    "detail": 68,
+    "noiseReduction": 32,
+    "color": 50,
+    "brightness": 0,
+    "contrast": 8,
+    "waveletGains": [18, 11, 6, 3, 1.5, 1]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

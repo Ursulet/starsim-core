@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>StarSimCore.Interop</AssemblyName>
+    <RootNamespace>StarSimCore.Interop</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StarSimCore.Domain\StarSimCore.Domain.csproj" />
+  </ItemGroup>
+</Project>

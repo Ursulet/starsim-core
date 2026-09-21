@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "mars.strong",
+  "targetId": "mars",
+  "name": "Strong",
+  "description": "Conservative strong engineering starting point for user-selected mars data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0.0125
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.1125
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 0.975
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1.05,
+        "green": 1,
+        "blue": 0.95
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 1.0625
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 100,
+    "detail": 94,
+    "noiseReduction": 18,
+    "color": 62,
+    "brightness": 0,
+    "contrast": 22,
+    "waveletGains": [56, 38, 22, 11, 4, 2]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "solar.natural",
+  "targetId": "solar",
+  "name": "Natural",
+  "description": "Conservative natural engineering starting point for user-selected solar data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": -0.004
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.024
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 1.004
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1.004,
+        "green": 1,
+        "blue": 0.996
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 0.968
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 55,
+    "detail": 58,
+    "noiseReduction": 30,
+    "color": 48,
+    "brightness": 0,
+    "contrast": 5,
+    "waveletGains": [9, 6, 4, 2, 1, 1]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

@@ -1,0 +1,244 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StarSimCore.UI.ViewModels"
+        xmlns:controls="using:StarSimCore.UI.Controls"
+        xmlns:loc="using:StarSimCore.UI.Localization"
+        x:Class="StarSimCore.UI.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{loc:Localize Key=App.Title}"
+        Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
+        Width="1536" Height="960" MinWidth="1280" MinHeight="720"
+        WindowStartupLocation="CenterScreen">
+  <Grid RowDefinitions="Auto,*,34">
+    <StackPanel Grid.Row="0">
+      <Menu Height="32">
+        <MenuItem Header="{loc:Localize Key=Menu.File}">
+          <MenuItem Header="{loc:Localize Key=Menu.File.OpenImage}" InputGesture="Ctrl+O" Click="OpenImage_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.File.OpenProject}" InputGesture="Ctrl+P" Click="OpenProject_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.File.SaveProject}" InputGesture="Ctrl+S" Click="SaveProject_Click" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.File.SaveProjectAs}" Click="SaveProject_Click" IsEnabled="{Binding IsImageLoaded}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.File.Export}" InputGesture="Ctrl+E" Click="Export_Click" IsEnabled="{Binding IsImageLoaded}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.File.Exit}" Click="Exit_Click" InputGesture="Alt+F4" />
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.Edit}">
+          <MenuItem Header="{loc:Localize Key=Menu.Edit.Undo}" InputGesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+          <MenuItem Header="{loc:Localize Key=Menu.Edit.Redo}" InputGesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Edit.ResetAll}" Command="{Binding ResetAllCommand}" />
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.View}">
+          <MenuItem Header="{loc:Localize Key=Menu.View.Fit}" InputGesture="Ctrl+0" Command="{Binding FitCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.ZoomIn}" InputGesture="Ctrl++" Command="{Binding ZoomInCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.ZoomOut}" InputGesture="Ctrl+-" Command="{Binding ZoomOutCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.View.BeforeAfter}" InputGesture="Ctrl+B" Command="{Binding ToggleComparisonCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.FullScreen}" InputGesture="F11" Click="FullScreen_Click" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.View.Beginner}" InputGesture="F1" Command="{Binding ShowBeginnerCommand}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.Expert}" InputGesture="F2" Command="{Binding ShowExpertCommand}" />
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.Process}">
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Wavelet}" Click="OpenWaveletTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.RichardsonLucy}" Click="OpenRichardsonLucyTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.NoiseReduction}" Click="OpenNoiseReductionTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.LocalDetail}" Click="OpenLocalDetailTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.UnsharpMask}" Click="OpenUnsharpMaskTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.MultiScaleSharpen}" Click="OpenMultiScaleSharpenTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Deringing}" Click="OpenDeringingTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.RgbAlign}" Click="OpenRgbAlignTool_Click" IsEnabled="{Binding IsColorImage}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.AdvancedColor}" Click="OpenAdvancedColorTool_Click" IsEnabled="{Binding IsColorImage}" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.RgbBalance}" Click="OpenRgbBalanceTool_Click" IsEnabled="{Binding IsColorImage}" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Saturation}" Click="OpenSaturationTool_Click" IsEnabled="{Binding IsColorImage}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.AdvancedTone}" Click="OpenAdvancedToneTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Exposure}" Click="OpenExposureTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Contrast}" Click="OpenContrastTool_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Gamma}" Click="OpenGammaTool_Click" />
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.Presets}">
+          <MenuItem Header="{loc:Localize Key=Preset.Natural}" Command="{Binding ApplyNamedPresetCommand}" CommandParameter="Natural" />
+          <MenuItem Header="{loc:Localize Key=Preset.Balanced}" Command="{Binding ApplyNamedPresetCommand}" CommandParameter="Balanced" />
+          <MenuItem Header="{loc:Localize Key=Preset.Detailed}" Command="{Binding ApplyNamedPresetCommand}" CommandParameter="Detailed" />
+          <MenuItem Header="{loc:Localize Key=Preset.Strong}" Command="{Binding ApplyNamedPresetCommand}" CommandParameter="Strong" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Presets.SaveCustom}" Command="{Binding ShowSaveCustomPresetCommand}" />
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.Plugins}">
+          <MenuItem Header="{loc:Localize Key=Menu.Plugins.Manager}" Click="OpenPluginManager_Click" />
+          <MenuItem Header="{loc:Localize Key=Menu.Plugins.Install}" Click="InstallPlugin_Click" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Plugins.DeveloperGuide}" Click="OpenPluginDeveloperGuide_Click" />
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.Settings}">
+          <MenuItem Header="{loc:Localize Key=Menu.Settings.Performance}" Click="OpenPerformanceSettings_Click" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Settings.Language}">
+            <MenuItem Header="English" ToggleType="Radio" IsChecked="{Binding IsEnglishLanguage, Mode=OneWay}" Command="{Binding SetLanguageCommand}" CommandParameter="en-US" />
+            <MenuItem Header="Română" ToggleType="Radio" IsChecked="{Binding IsRomanianLanguage, Mode=OneWay}" Command="{Binding SetLanguageCommand}" CommandParameter="ro-RO" />
+          </MenuItem>
+        </MenuItem>
+        <MenuItem Header="{loc:Localize Key=Menu.Help}">
+          <MenuItem Header="{loc:Localize Key=Menu.Help.Guide}" InputGesture="Ctrl+F1" Click="Help_Click" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.Help.About}" Click="About_Click" />
+        </MenuItem>
+      </Menu>
+
+      <Border Classes="top-command-bar" Height="60">
+        <Grid Margin="16,0" ColumnDefinitions="Auto,Auto,*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,18,0">
+            <Border Width="38" Height="38" CornerRadius="10" Background="#102D43" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+              <TextBlock Text="✦" Foreground="{DynamicResource AccentBrush}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Width="134" VerticalAlignment="Center">
+              <TextBlock Text="{loc:Localize Key=App.Title}" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="{loc:Localize Key=App.Subtitle}" Foreground="#5186AD" FontSize="7.5" LetterSpacing="0.8" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="command" Content="{loc:Localize Key=Toolbar.OpenShort}" Click="OpenImage_Click" />
+            <Button Classes="command" Content="{loc:Localize Key=Toolbar.SaveShort}" Click="SaveProject_Click" IsEnabled="{Binding IsImageLoaded}" />
+            <Button Classes="command" Content="{loc:Localize Key=Toolbar.Undo}" Command="{Binding UndoCommand}" />
+            <Button Classes="command subtle" Content="{loc:Localize Key=Toolbar.Redo}" Command="{Binding RedoCommand}" />
+            <Button Classes="command" Content="{loc:Localize Key=Toolbar.Compare}" Command="{Binding ToggleComparisonCommand}" Classes.active="{Binding IsComparisonEnabled}" IsEnabled="{Binding IsImageLoaded}" ToolTip.Tip="{loc:Localize Key=Toolbar.Compare.Tip}" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Button Classes="command square" Content="−" Command="{Binding ZoomOutCommand}" IsEnabled="{Binding IsImageLoaded}" />
+            <TextBlock Text="{Binding ZoomText}" Width="46" TextAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" />
+            <Button Classes="command square" Content="+" Command="{Binding ZoomInCommand}" IsEnabled="{Binding IsImageLoaded}" />
+            <Button Classes="command" Content="{loc:Localize Key=Toolbar.Fit}" Command="{Binding FitCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          </StackPanel>
+          <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+            <Border Classes="mode-switch"><StackPanel Orientation="Horizontal" Spacing="2"><Button Classes="mode compact" Classes.active="{Binding IsBeginnerMode}" Content="{loc:Localize Key=Mode.Beginner}" Command="{Binding ShowBeginnerCommand}" /><Button Classes="mode compact" Classes.active="{Binding IsExpertMode}" Content="{loc:Localize Key=Mode.Expert}" Command="{Binding ShowExpertCommand}" /></StackPanel></Border>
+            <Button Classes="command" Content="{loc:Localize Key=Toolbar.Performance}" Click="OpenPerformanceSettings_Click" />
+            <Button Classes="primary export" Content="{loc:Localize Key=Toolbar.Export}" Click="Export_Click" IsEnabled="{Binding IsImageLoaded}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,12,416" Margin="12,12,12,10">
+      <Border Grid.Column="0" Classes="viewer-frame">
+        <Grid RowDefinitions="43,*">
+          <Border Classes="panel-header" CornerRadius="7,7,0,0">
+            <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▧" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" /><TextBlock Grid.Column="1" Text="{loc:Localize Key=Viewer.ImageViewer}" Classes="secondary" FontSize="12" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="header-icon" Content="⌗" Click="FullScreen_Click" ToolTip.Tip="{loc:Localize Key=Viewer.FullScreen.Tip}" /></Grid>
+          </Border>
+          <Grid Grid.Row="1" Background="#000000" ClipToBounds="True">
+            <controls:ImageComparisonViewer Original="{Binding OriginalBitmap}" Processed="{Binding ProcessedBitmap}" OriginalPixels="{Binding OriginalPixels}" ProcessedPixels="{Binding ProcessedPixels}" ChannelCount="{Binding ImageChannelCount}" Fit="{Binding IsFitToViewer}" Zoom="{Binding ZoomFactor}" Compare="{Binding IsComparisonEnabled}" PreviewEnabled="True" Split="{Binding ComparisonSplit}" PixelReadout="{Binding PixelReadout}" IsVisible="{Binding IsImageLoaded}">
+              <controls:ImageComparisonViewer.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{loc:Localize Key=Context.Undo}" Command="{Binding UndoCommand}" />
+                  <MenuItem Header="{loc:Localize Key=Context.Redo}" Command="{Binding RedoCommand}" />
+                  <Separator />
+                  <MenuItem Header="{loc:Localize Key=Context.Fit}" Command="{Binding FitCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <MenuItem Header="{loc:Localize Key=Context.ZoomIn}" Command="{Binding ZoomInCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <MenuItem Header="{loc:Localize Key=Context.ZoomOut}" Command="{Binding ZoomOutCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <MenuItem Header="{loc:Localize Key=Context.Compare}" Command="{Binding ToggleComparisonCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <Separator />
+                  <MenuItem Header="{loc:Localize Key=Context.ResetAll}" Command="{Binding ResetAllCommand}" />
+                  <MenuItem Header="{loc:Localize Key=Context.Export}" Click="Export_Click" IsEnabled="{Binding IsImageLoaded}" />
+                </ContextMenu>
+              </controls:ImageComparisonViewer.ContextMenu>
+            </controls:ImageComparisonViewer>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="11" IsVisible="{Binding !IsImageLoaded}">
+              <Border Width="54" Height="54" CornerRadius="12" Background="#0C1A26" BorderBrush="#23445D" BorderThickness="1"><TextBlock Text="▧" FontSize="24" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+              <TextBlock Text="{loc:Localize Key=Viewer.NoImage}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" /><TextBlock Text="{loc:Localize Key=Viewer.NoImageHint}" Classes="secondary" HorizontalAlignment="Center" />
+            </StackPanel>
+            <Border Classes="image-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20" IsVisible="{Binding IsComparisonEnabled}"><TextBlock Text="{loc:Localize Key=Viewer.Original}" FontSize="10" FontWeight="SemiBold" /></Border>
+            <Border Classes="image-badge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20" IsVisible="{Binding IsComparisonEnabled}"><TextBlock Text="{loc:Localize Key=Viewer.Processed}" FontSize="10" FontWeight="SemiBold" /></Border>
+            <Border Classes="processing-flyout" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="14" IsVisible="{Binding IsProcessingFeedbackVisible}"><StackPanel Spacing="6"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding ProcessingStatusText}" FontWeight="SemiBold" FontSize="11" /><Button Grid.Column="1" Content="{loc:Localize Key=Processing.Cancel}" Command="{Binding CancelProcessingCommand}" IsEnabled="{Binding CanCancelProcessing}" Padding="8,2" MinHeight="26" /></Grid><ProgressBar Width="310" Minimum="0" Maximum="100" Value="{Binding ProcessingPercent}" IsIndeterminate="{Binding IsProcessingIndeterminate}" /></StackPanel></Border>
+            <Border Classes="processing-flyout" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsBusy}"><StackPanel Orientation="Horizontal" Spacing="10"><ProgressBar Width="90" IsIndeterminate="True" /><TextBlock Text="{loc:Localize Key=Processing.OpeningImage}" /></StackPanel></Border>
+            <Border Background="#24151AF5" BorderBrush="#D85A6A" BorderThickness="1" CornerRadius="8" Padding="14" Margin="16" MaxWidth="700" HorizontalAlignment="Center" VerticalAlignment="Bottom" IsVisible="{Binding IsProcessingErrorVisible}"><StackPanel Spacing="7"><Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{loc:Localize Key=Error.ProcessingFailed}" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="{Binding ProcessingErrorMessage}" TextWrapping="Wrap" /><TextBlock Text="{Binding ProcessingErrorCode}" Classes="muted" /></StackPanel><Button Grid.Column="1" Content="×" Command="{Binding DismissProcessingErrorCommand}" /></Grid><Expander Header="{loc:Localize Key=Error.TechnicalDetails}" IsVisible="{Binding ShowTechnicalDiagnostics}"><StackPanel><TextBox Text="{Binding ProcessingErrorTechnicalDetails}" IsReadOnly="True" AcceptsReturn="True" MaxHeight="180" FontFamily="Consolas" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="{loc:Localize Key=Error.CopyDetails}" Command="{Binding CopyErrorDetailsCommand}" /><Button Content="{loc:Localize Key=Error.OpenLogFolder}" Command="{Binding OpenLogFolderCommand}" /></StackPanel></StackPanel></Expander></StackPanel></Border>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="2" RowDefinitions="188,12,*">
+        <Border Grid.Row="0" Classes="rail-card">
+          <Grid RowDefinitions="44,*,34">
+            <Border Classes="panel-header" CornerRadius="7,7,0,0"><Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▥" FontSize="17" Margin="0,0,10,0" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{loc:Localize Key=Expert.Histogram}" FontWeight="SemiBold" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="header-icon" Content="⧉" Click="OpenHistogramWindow_Click" ToolTip.Tip="{loc:Localize Key=Histogram.OpenSeparate.Tip}" /></Grid></Border>
+            <Border Grid.Row="1" Background="#071019" Margin="8,0" BorderBrush="#203748" BorderThickness="1" CornerRadius="5"><Grid><controls:HistogramControl Data="{Binding Histogram}" Margin="2" /><TextBlock Text="{loc:Localize Key=Histogram.NoData}" Classes="muted" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsImageLoaded}" /></Grid></Border>
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="16,0"><TextBlock Text="{Binding HistogramStats}" Foreground="#84A7C3" FontSize="10" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="RGB  ⌄" FontSize="10" VerticalAlignment="Center" /></Grid>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Classes="rail-card">
+          <Grid RowDefinitions="50,*">
+            <Border Classes="panel-header" CornerRadius="7,7,0,0">
+              <Grid ColumnDefinitions="Auto,128,*" ColumnSpacing="10"><TextBlock Text="☷" FontSize="18" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{loc:Localize Key=Panel.Processing}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" /><Grid Grid.Column="2" IsVisible="{Binding IsExpertMode}"><TextBox Classes="search" Text="{Binding ModuleSearchText, Mode=TwoWay}" PlaceholderText="{loc:Localize Key=Panel.SearchModules}" /><Button Content="×" Classes="search-clear" Command="{Binding ClearModuleSearchCommand}" HorizontalAlignment="Right" /></Grid></Grid>
+            </Border>
+
+            <ScrollViewer x:Name="BeginnerControlsScroll" Grid.Row="1" IsVisible="{Binding IsBeginnerMode}" VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="14" Spacing="10">
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{loc:Localize Key=Panel.BeginnerWorkflow}" Classes="group-title" VerticalAlignment="Center" /><Button Grid.Column="1" Content="{loc:Localize Key=Expert.ResetAll}" Command="{Binding ResetAllCommand}" Classes="link" /></Grid>
+                <TextBlock Text="{loc:Localize Key=Beginner.Target}" Classes="secondary" /><ComboBox ItemsSource="{Binding TargetOptions}" SelectedItem="{Binding SelectedTargetOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <TextBlock Text="{loc:Localize Key=Beginner.Preset}" Classes="secondary" /><ComboBox ItemsSource="{Binding PresetOptions}" SelectedItem="{Binding SelectedPresetOption}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <Border Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="1" CornerRadius="5" Padding="8,5" IsVisible="{Binding IsBeginnerPresetModified}"><TextBlock Text="{Binding BeginnerPresetDisplayName}" Foreground="#F5C467" /></Border>
+                <TextBlock Text="{Binding ActivePresetDescription}" Classes="muted" FontSize="10" TextWrapping="Wrap" /><Button Classes="primary" Content="{loc:Localize Key=Beginner.ApplyPreset}" Command="{Binding ApplyPresetCommand}" />
+                <Separator /><TextBlock Text="{loc:Localize Key=Beginner.Adjustments}" Classes="group-title" />
+                <Grid ColumnDefinitions="110,*,58"><TextBlock Text="{loc:Localize Key=Beginner.PresetStrength}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding PresetStrength}" PointerPressed="ParameterSlider_PointerPressed" PointerReleased="ParameterSlider_PointerReleased" PointerCaptureLost="ParameterSlider_PointerCaptureLost" /><TextBox Grid.Column="2" Classes="numeric" Text="{Binding PresetStrength, StringFormat={}{0:0}}" IsReadOnly="True" /></Grid>
+                <Grid ColumnDefinitions="110,*,58"><TextBlock Text="{loc:Localize Key=Beginner.Detail}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Detail}" PointerPressed="ParameterSlider_PointerPressed" PointerReleased="ParameterSlider_PointerReleased" PointerCaptureLost="ParameterSlider_PointerCaptureLost" /><TextBox Grid.Column="2" Classes="numeric" Text="{Binding Detail, StringFormat={}{0:0}}" IsReadOnly="True" /></Grid>
+                <Grid ColumnDefinitions="110,*,58"><TextBlock Text="{loc:Localize Key=Beginner.NoiseReduction}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding NoiseReduction}" PointerPressed="ParameterSlider_PointerPressed" PointerReleased="ParameterSlider_PointerReleased" PointerCaptureLost="ParameterSlider_PointerCaptureLost" /><TextBox Grid.Column="2" Classes="numeric" Text="{Binding NoiseReduction, StringFormat={}{0:0}}" IsReadOnly="True" /></Grid>
+                <Grid ColumnDefinitions="110,*,58" IsEnabled="{Binding IsColorImage}"><TextBlock Text="{loc:Localize Key=Beginner.Color}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Color}" PointerPressed="ParameterSlider_PointerPressed" PointerReleased="ParameterSlider_PointerReleased" PointerCaptureLost="ParameterSlider_PointerCaptureLost" /><TextBox Grid.Column="2" Classes="numeric" Text="{Binding Color, StringFormat={}{0:0}}" IsReadOnly="True" /></Grid>
+                <Grid ColumnDefinitions="110,*,58"><TextBlock Text="{loc:Localize Key=Beginner.Brightness}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Brightness}" PointerPressed="ParameterSlider_PointerPressed" PointerReleased="ParameterSlider_PointerReleased" PointerCaptureLost="ParameterSlider_PointerCaptureLost" /><TextBox Grid.Column="2" Classes="numeric" Text="{Binding Brightness, StringFormat={}{0:0}}" IsReadOnly="True" /></Grid>
+                <Grid ColumnDefinitions="110,*,58"><TextBlock Text="{loc:Localize Key=Beginner.Contrast}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Contrast}" PointerPressed="ParameterSlider_PointerPressed" PointerReleased="ParameterSlider_PointerReleased" PointerCaptureLost="ParameterSlider_PointerCaptureLost" /><TextBox Grid.Column="2" Classes="numeric" Text="{Binding Contrast, StringFormat={}{0:0}}" IsReadOnly="True" /></Grid>
+                <TextBlock Text="{loc:Localize Key=Beginner.ColorPreset}" Classes="secondary" /><ComboBox ItemsSource="{Binding ColorPresetOptions}" SelectedItem="{Binding SelectedColorPresetOption}" IsEnabled="{Binding IsColorImage}"><ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox><Button Content="{loc:Localize Key=Beginner.AutoRgbBalance}" Command="{Binding AutoRgbBalanceCommand}" />
+              </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer x:Name="ExpertControlsScroll" Grid.Row="1" IsVisible="{Binding IsExpertMode}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
+                <Border Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="0,0,0,1" Padding="10,7" IsVisible="{Binding IsMultiSharpeningWarningVisible}"><TextBlock Text="{Binding MultiSharpeningWarningText}" Foreground="#F5C467" FontSize="10" TextWrapping="Wrap" /></Border>
+                <ItemsControl Classes="processing-groups" ItemsSource="{Binding ProcessingGroups}" HorizontalAlignment="Stretch">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProcessingPanelGroupViewModel">
+                      <Expander Classes="processing-group" IsExpanded="{Binding IsExpanded}" IsVisible="{Binding IsPanelVisible}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                        <Expander.Header><Grid ColumnDefinitions="Auto,*,Auto" Margin="3,0,7,0"><TextBlock Text="{Binding Icon}" FontSize="15" Width="26" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding DisplayName}" Classes="group-title" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding ModuleCountText}" Classes="muted" FontSize="9" VerticalAlignment="Center" /></Grid></Expander.Header>
+                        <ItemsControl Classes="processing-modules" ItemsSource="{Binding Modules}" HorizontalAlignment="Stretch">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProcessorModuleViewModel">
+                              <Border Classes="processor-row" Classes.active="{Binding IsEnabled}" IsVisible="{Binding IsPanelVisible}">
+                                <StackPanel>
+                                  <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Height="50">
+                                    <ToggleSwitch Grid.Column="0" IsChecked="{Binding IsEnabled}" IsEnabled="{Binding IsCompatible}" Classes="module-toggle" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Icon}" FontFamily="Segoe UI Symbol" FontSize="19" Width="34" TextAlignment="Center" VerticalAlignment="Center" Foreground="#A9CBE3" />
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2"><TextBlock Text="{Binding DisplayName}" FontSize="11.5" FontWeight="SemiBold" /><TextBlock Text="{Binding Description}" Foreground="#7392A9" FontSize="9" TextTrimming="CharacterEllipsis" /></StackPanel>
+                                    <Button Grid.Column="3" Classes="row-action" Content="⧉" Command="{Binding OpenWindowCommand}" ToolTip.Tip="{loc:Localize Key=Panel.OpenSeparate.Tip}" />
+                                    <Grid Grid.Column="4"><Button Classes="row-action" Content="⌄" Command="{Binding ToggleExpandedCommand}" IsVisible="{Binding !IsExpanded}" /><Button Classes="row-action" Content="⌃" Command="{Binding ToggleExpandedCommand}" IsVisible="{Binding IsExpanded}" /></Grid>
+                                  </Grid>
+                                  <Border Classes="inline-controls" IsVisible="{Binding IsExpanded}">
+                                    <StackPanel Spacing="5">
+                                      <ItemsControl ItemsSource="{Binding InlineParameters}">
+                                        <ItemsControl.ItemTemplate>
+                                          <DataTemplate x:DataType="vm:ProcessorParameterViewModel"><Grid ColumnDefinitions="96,*,64" Margin="0,2"><TextBlock Text="{Binding CompactName}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" /><Slider Grid.Column="1" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value}" Margin="6,0" /><TextBox Grid.Column="2" Classes="numeric compact" Text="{Binding Value, Mode=TwoWay, StringFormat={}{0:0.###}}" /></Grid></DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                      </ItemsControl>
+                                      <Grid ColumnDefinitions="*,Auto"><Button Classes="link" Content="{loc:Localize Key=ToolWindow.ResetModule}" Command="{Binding ResetCommand}" HorizontalAlignment="Left" /><Button Grid.Column="1" Classes="link" Content="{loc:Localize Key=Panel.AdvancedDiagnostic}" Command="{Binding OpenWindowCommand}" IsVisible="{Binding IsWavelet}" /><Button Grid.Column="1" Classes="link" Content="{loc:Localize Key=Panel.OpenSeparate}" Command="{Binding OpenWindowCommand}" IsVisible="{Binding !IsWavelet}" /></Grid>
+                                    </StackPanel>
+                                  </Border>
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </Expander>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Border Height="8" />
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="1" ZIndex="25" Width="480" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="18" Background="#101C26FA" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="9" IsVisible="{Binding IsLocateSourceRequired}"><StackPanel Spacing="12"><TextBlock Text="{loc:Localize Key=Dialog.RelocateSource.Title}" Classes="heading" /><TextBlock Text="{Binding LocateSourceMessage}" TextWrapping="Wrap" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="{loc:Localize Key=Common.Cancel}" Click="DismissLocateSource_Click" /><Button Classes="primary" Content="{loc:Localize Key=Dialog.RelocateSource.Locate}" Click="LocateSource_Click" /></StackPanel></StackPanel></Border>
+    <Border Grid.Row="1" ZIndex="25" Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="18" Background="#101C26FA" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="9" IsVisible="{Binding IsSaveCustomPresetDialogVisible}"><StackPanel Spacing="12"><TextBlock Text="{loc:Localize Key=Dialog.CustomPreset.Title}" Classes="heading" /><TextBox Text="{Binding NewCustomPresetName}" PlaceholderText="{loc:Localize Key=Dialog.CustomPreset.Name}" /><TextBox Text="{Binding NewCustomPresetDescription}" PlaceholderText="{loc:Localize Key=Dialog.CustomPreset.Description}" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="{loc:Localize Key=Common.Cancel}" Command="{Binding DismissSaveCustomPresetCommand}" /><Button Classes="primary" Content="{loc:Localize Key=Dialog.CustomPreset.Save}" Command="{Binding SaveCustomPresetCommand}" /></StackPanel></StackPanel></Border>
+
+    <Border Grid.Row="2" Classes="status-bar"><Grid ColumnDefinitions="*,Auto,*" Margin="16,0"><TextBlock Text="{Binding SourceSummary}" Foreground="#86A5BD" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" /><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Text="●" Foreground="#43E489" FontSize="10" /><TextBlock Text="{Binding ProcessingStatusText}" FontSize="10.5" /></StackPanel><StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" VerticalAlignment="Center"><TextBlock Text="{Binding ZoomStatusText}" Foreground="#86A5BD" FontSize="10" /><TextBlock Text="|" Classes="muted" /><TextBlock Text="{Binding PixelReadout}" Foreground="#86A5BD" FontSize="10" /></StackPanel></Grid></Border>
+  </Grid>
+</Window>

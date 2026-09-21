@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>StarSimCore.Application</AssemblyName>
+    <RootNamespace>StarSimCore.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StarSimCore.Domain\StarSimCore.Domain.csproj" />
+    <ProjectReference Include="..\StarSimCore.Interop\StarSimCore.Interop.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\presets\builtin\**\*.json" Link="presets\builtin\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\presets\schema\preset.schema.json" Link="presets\schema\preset.schema.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

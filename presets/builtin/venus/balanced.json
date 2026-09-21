@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "presetId": "venus.balanced",
+  "targetId": "venus",
+  "name": "Balanced",
+  "description": "Conservative balanced engineering starting point for user-selected venus data; intended for later calibration, not a universal scientific optimum.",
+  "recipeVersion": "1.1.0",
+  "processors": [
+    {
+      "id": "core.linear-exposure",
+      "enabled": true,
+      "parameters": {
+        "stops": 0.007
+      }
+    },
+    {
+      "id": "core.contrast",
+      "enabled": true,
+      "parameters": {
+        "factor": 1.028
+      }
+    },
+    {
+      "id": "core.gamma",
+      "enabled": true,
+      "parameters": {
+        "gamma": 1
+      }
+    },
+    {
+      "id": "core.rgb-balance",
+      "enabled": true,
+      "parameters": {
+        "red": 1,
+        "green": 1,
+        "blue": 1
+      }
+    },
+    {
+      "id": "core.saturation",
+      "enabled": true,
+      "parameters": {
+        "amount": 0.958
+      }
+    }
+  ],
+  "macros": {
+    "presetStrength": 65,
+    "detail": 64,
+    "noiseReduction": 36,
+    "color": 40,
+    "brightness": -1,
+    "contrast": 7,
+    "waveletGains": [12, 16, 12, 6, 2.5, 1]
+  },
+  "compatibility": {
+    "minimumAppVersion": "1.0.0",
+    "colorModels": [
+      "Grayscale",
+      "Rgb"
+    ],
+    "requiredProcessors": [
+      "core.linear-exposure",
+      "core.contrast",
+      "core.gamma",
+      "core.rgb-balance",
+      "core.saturation"
+    ]
+  }
+}

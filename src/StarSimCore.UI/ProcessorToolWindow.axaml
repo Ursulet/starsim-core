@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StarSimCore.UI.ViewModels"
+        xmlns:loc="using:StarSimCore.UI.Localization"
+        x:Class="StarSimCore.UI.ProcessorToolWindow"
+        x:DataType="vm:ProcessorModuleViewModel"
+        Title="{Binding DisplayName, StringFormat='StarSim Core — {0}'}"
+        Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
+        Width="720" Height="640" MinWidth="620" MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <Grid RowDefinitions="92,*,Auto">
+    <Border Classes="panel-header" Padding="18,0">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Border Width="40" Height="40" CornerRadius="8" Background="#102B3E" BorderBrush="#245978" BorderThickness="1" Margin="0,0,12,0">
+          <TextBlock Text="{Binding Icon}" FontFamily="Segoe UI Symbol" FontSize="22" Foreground="#83CCFA" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4" Margin="0,0,16,0">
+          <TextBlock Text="{Binding DisplayName}" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding Description}" Foreground="#7899B1" FontSize="10.5" TextWrapping="Wrap" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="7">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"><ToggleSwitch IsChecked="{Binding IsEnabled}" IsEnabled="{Binding IsCompatible}" OnContent="" OffContent="" Classes="compact" /><TextBlock Text="{loc:Localize Key=ToolWindow.Enabled}" VerticalAlignment="Center" FontSize="10.5" /></StackPanel>
+          <Button Content="{loc:Localize Key=ToolWindow.ResetModule}" Command="{Binding ResetCommand}" Classes="command" MinWidth="126" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="16,14" Spacing="7">
+        <Border Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="1" CornerRadius="6" Padding="10,8" IsVisible="{Binding IsExternalPlugin}" Margin="0,0,0,5">
+          <StackPanel Spacing="3">
+            <TextBlock Text="{loc:Localize Key=ToolWindow.PluginWarning}" Foreground="#F5C467" FontSize="9" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding PluginProviderSummary}" Foreground="#D9B66C" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+        <TextBlock Text="{loc:Localize Key=ToolWindow.Parameters}" Classes="group-title" Margin="2,0,0,4" />
+        <ItemsControl ItemsSource="{Binding Parameters}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ProcessorParameterViewModel">
+              <Border Classes="processor-row" Padding="12,8">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+                  <Grid ColumnDefinitions="*,72">
+                    <StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11.5" /><TextBlock Text="{Binding Id}" Classes="muted" FontSize="8.5" /></StackPanel>
+                    <TextBox Grid.Column="1" Classes="numeric" Width="70" Text="{Binding Value, Mode=TwoWay, StringFormat={}{0:0.###}}" />
+                  </Grid>
+                  <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+                    <Button Classes="nudge" Content="−" Command="{Binding NudgeDownCommand}" Margin="0,0,8,0" />
+                    <Slider Grid.Column="1" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value}" />
+                    <Button Grid.Column="2" Classes="nudge" Content="+" Command="{Binding NudgeUpCommand}" Margin="8,0,0,0" />
+                  </Grid>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2" Background="#07121C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,9">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding UsageHint}" Foreground="#7899B1" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" />
+        <Button Grid.Column="1" Content="{loc:Localize Key=Common.Close}" Click="Close_Click" Classes="command" MinWidth="82" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
