@@ -59,7 +59,7 @@ public static class BuiltInProcessors
         new ExpertNativeProcessor(
             NoiseReductionId, "Noise Reduction", Categories.Restoration, NativeProcessorKind.NoiseReduction,
             [new("luminance", "Luminance", 0, 1, 0), new("chrominance", "Chrominance", 0, 1, 0), new("detailProtection", "Fine Detail Protection", 0, 1, 0.7), new("threshold", "Threshold", 0.1, 5, 1)],
-            isEnabledByDefault: false, semanticVersion: new Version(2, 0, 0)),
+            isEnabledByDefault: false, semanticVersion: new Version(3, 0, 0)),
         new ExpertNativeProcessor(
             RichardsonLucyId, "Richardson-Lucy", Categories.Restoration, NativeProcessorKind.RichardsonLucy,
             [new("iterations", "Iterations", 1, 50, 1), new("psfRadius", "PSF Radius", 0.3, 5, 1), new("strength", "Strength", 0, 1, 0), new("damping", "Damping", 0, 1, 0.001)],
@@ -77,15 +77,15 @@ public static class BuiltInProcessors
         new ExpertNativeProcessor(
             MultiScaleSharpenId, "Multi-scale Sharpen", Categories.AdvancedSharpening, NativeProcessorKind.MultiScaleSharpen,
             [new("fineAmount", "Fine Amount", 0, 2, 0), new("fineRadius", "Fine Radius", 0.3, 3, 0.8), new("broadAmount", "Broad Amount", 0, 2, 0), new("broadRadius", "Broad Radius", 1, 12, 3), new("threshold", "Threshold", 0, 0.5, 0)],
-            isEnabledByDefault: false, semanticVersion: new Version(2, 0, 0)),
+            isEnabledByDefault: false, semanticVersion: new Version(3, 0, 0)),
         new ExpertNativeProcessor(
             DeringingId, "Deringing / Halo Protection", Categories.Restoration, NativeProcessorKind.Deringing,
             [new("strength", "Strength", 0, 1, 0), new("radius", "Radius", 1, 8, 2), new("edgeProtection", "Edge Protection", 0, 1, 0.7)],
-            isEnabledByDefault: false, semanticVersion: new Version(2, 0, 0)),
+            isEnabledByDefault: false, semanticVersion: new Version(3, 0, 0)),
         new ExpertNativeProcessor(
             LocalDetailId, "Local Detail", Categories.Detail, NativeProcessorKind.LocalDetail,
             [new("localAmount", "Local Contrast", 0, 2, 0), new("localRadius", "Local Radius", 1, 32, 8), new("microAmount", "Microcontrast", 0, 2, 0), new("microRadius", "Micro Radius", 0.3, 4, 1), new("edgeProtection", "Edge Protection", 0, 1, 0.8)],
-            isEnabledByDefault: false),
+            isEnabledByDefault: false, semanticVersion: new Version(2, 0, 0)),
 
         // Color and tone are late display operations. Changing them reuses every
         // expensive upstream stage rather than rebuilding from Source.
@@ -105,7 +105,7 @@ public static class BuiltInProcessors
         new ExpertNativeProcessor(
             AdvancedToneId, "Advanced Tone", Categories.Tone, NativeProcessorKind.AdvancedTone,
             [new("brightness", "Brightness", -1, 1, 0), new("blackPoint", "Black Point", 0, 0.49, 0), new("whitePoint", "White Point", 0.51, 2, 1), new("highlights", "Highlights", -1, 1, 0), new("shadows", "Shadows", -1, 1, 0)],
-            isEnabledByDefault: true),
+            isEnabledByDefault: true, semanticVersion: new Version(2, 0, 0)),
         new NativeProcessor(
             ExposureId, "Brightness / Exposure", Categories.Tone, NativeProcessorKind.LinearExposure,
             [new("stops", "Exposure", -4, 4, 0)],

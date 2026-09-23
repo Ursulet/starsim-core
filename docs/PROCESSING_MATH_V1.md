@@ -41,15 +41,15 @@ Multi-scale Sharpen has independent fine and broad bands:
 
 `D2 = fineBlur - broadBlur`
 
-It adds `fineAmount*soft(D1) + broadAmount*soft(D2)`. Zero amounts are exact neutral.
+Both blurs are computed directly from the source. Broad Radius is the absolute target scale and is kept at least `0.15` above Fine Radius so the bands remain ordered. The processor adds `fineAmount*soft(D1) + broadAmount*soft(D2)`. Zero amounts are exact neutral.
 
 ## Noise reduction
 
-Noise Reduction uses three recursive Gaussian detail bands. Noise sigma is `median(abs(W1-median(W1)))/0.67448975`; every band uses `T=Strength*ThresholdScale*sigmaNoise` for soft shrinkage. RGB Rec.709 luminance and signed chroma components use independent strengths. Fine Detail Protection reduces shrinkage for coefficients above the estimated noise. Zero strengths are exact neutral.
+Noise Reduction uses three recursive Gaussian detail bands. Noise sigma is `median(abs(W1-median(W1)))/0.67448975`; every band uses `T=Strength*ThresholdScale*sigmaNoise` for soft shrinkage. RGB Rec.709 luminance and signed chroma components use independent strengths. After nonlinear chroma shrinkage, residual Rec.709 luminance is removed from the chroma planes before reconstruction. Fine Detail Protection reduces shrinkage for coefficients above the estimated noise. Zero strengths are exact neutral.
 
 ## Deringing and halo protection
 
-The processor uses a documented self-reference fallback. For each pixel, a circular reflected neighborhood supplies `min/max`; the allowed extension is `EdgeProtection*(max-min)`. The center is clamped to the extended envelope and blended by Strength. It has no implicit access to another stage.
+The processor uses a documented self-reference fallback. For each pixel, a circular reflected neighborhood supplies `min/max`; the allowed extension is `EdgeProtection*(max-min)`. The center is clamped to the extended envelope and blended by Strength. Fractional Radius values interpolate the results of the adjacent integer neighborhoods. RGB uses one Rec.709 luminance guide and applies its additive correction equally to all channels, preventing independent channel extrema from creating colored halos. It has no implicit access to another stage.
 
 ## Richardson–Lucy deconvolution
 
@@ -81,19 +81,21 @@ Advanced Tone applies before the independent Exposure, Contrast, and Gamma stage
 
 `n = (x - blackPoint) / (whitePoint - blackPoint) + brightness`
 
-`y = n + 0.25*shadows*(1-n)^2 + 0.25*highlights*n^2`
+`p = clamp(n,0,1)`
 
-White Point must be greater than Black Point. The curve deliberately does not clamp its result, so out-of-range float detail remains available to later processors.
+`y = n + 0.25*shadows*(1-p)^2 + 0.25*highlights*p^2`
+
+White Point must be greater than Black Point. Only the weighting position is bounded; the curve deliberately does not clamp its result, so out-of-range float detail remains available to later processors without unbounded quadratic shadow/highlight weights.
 
 ## Local detail
 
 Local Contrast uses `source - Gaussian(source, localRadius)` and Microcontrast uses the same difference at `microRadius`. Their weighted sum is attenuated by the edge gate:
 
-`gate = 1 / (1 + edgeProtection * abs(localDetail) * 20)`
+`gate = 1 / (1 + edgeProtection * max(abs(localDetail),abs(microDetail)) * 20)`
 
 `y = source + gate * (localAmount*localDetail + microAmount*microDetail)`
 
-Zero amounts are neutral defaults. The gate suppresses strong-edge amplification to reduce halos.
+Zero amounts are neutral defaults. The gate suppresses strong-edge amplification detected in either band to reduce halos.
 
 ## Parameter state and UI
 

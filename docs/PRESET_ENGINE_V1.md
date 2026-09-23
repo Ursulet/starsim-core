@@ -18,7 +18,7 @@ The 28 built-ins are practical starting points, not claims of universal scientif
 
 Each remaining macro owns a small, explicit part of the canonical pipeline:
 
-- `Detail` directly changes only the six Wavelet band contribution/gain values. At 50 every band is neutral (`1`); below 50 the bands are attenuated; above 50 the selected target profile is introduced progressively. It never changes Gaussian width, Wavelet Denoise, Threshold, Gamma, Contrast or Local Detail.
+- `Detail` directly changes only the six Wavelet band contribution/gain values. At 50 every band is neutral (`1`); below 50 the bands are attenuated; above 50 the selected target profile is introduced progressively. Beginner adds ten gain points to the nominal L1 profile contribution and scales L2–L6 proportionally above neutral, preserving the target-specific profile shape. For example, an L1 profile value of `47` resolves to `57`, while an L6 value of `2` remains close to `2`, not `12`. It never changes Gaussian width, Wavelet Denoise, Threshold, Gamma, Contrast or Local Detail.
 - `Noise Reduction` changes and enables only the dedicated Noise Reduction processor. It never changes Wavelet Denoise/Threshold or Contrast.
 - `Color` and Natural/Neutral/Warm/Vivid change RGB gains and saturation only for RGB images.
 - `Brightness` maps to linear exposure stops.
@@ -28,7 +28,7 @@ Changing a target or preset only stages its visible Beginner values. The canonic
 
 ## Planetary profiles
 
-Each target has Natural, Balanced, Detailed and Strong profiles. Their Wavelet values are direct Classic L1–L6 gains; no hidden conversion to Sharpen, Denoise or Threshold occurs.
+Each target has Natural, Balanced, Detailed and Strong profiles. Their `waveletGains` arrays define the direct Classic L1–L6 profile shape. Beginner applies the documented ten-point L1 headroom and proportional contribution scale when mapping that shape into canonical gains; there is no conversion to Sharpen, Denoise, Threshold or any other processor.
 
 | Target | Profile emphasis |
 | --- | --- |

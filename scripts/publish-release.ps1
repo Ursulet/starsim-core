@@ -1,10 +1,10 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$')]
-    [string]$Version = '0.9.0-beta.1',
+    [string]$Version = '1.0.0',
 
     [ValidatePattern('^\d+\.\d+\.\d+\.\d+$')]
-    [string]$NumericVersion = '0.9.0.0',
+    [string]$NumericVersion = '1.0.0.0',
 
     [switch]$SkipNativeBuild
 )
@@ -19,6 +19,7 @@ $packageRoot = Join-Path $repositoryRoot 'artifacts\package'
 $archivePath = Join-Path $packageRoot "StarSimCore-$Version-win-x64-portable.zip"
 $nativeStageRoot = Join-Path $repositoryRoot 'artifacts\native\win-x64\Release'
 $nativeBuildRoot = Join-Path $repositoryRoot 'native\StarSimCore.Native\out\build\windows-x64-release'
+$releaseNotesSource = Join-Path $repositoryRoot "releases\$Version.md"
 
 function Assert-ArtifactPath {
     param([Parameter(Mandatory)][string]$Path)
@@ -42,6 +43,9 @@ if (-not $SkipNativeBuild) {
 
 if (-not (Test-Path -LiteralPath $nativeStageRoot)) {
     throw "Native Release files are missing at $nativeStageRoot. Run without -SkipNativeBuild."
+}
+if (-not (Test-Path -LiteralPath $releaseNotesSource)) {
+    throw "Release notes are missing: $releaseNotesSource"
 }
 
 if (Test-Path -LiteralPath $publishRoot) {
@@ -95,6 +99,8 @@ Copy-Item -LiteralPath (Join-Path $repositoryRoot 'native\StarSimCore.SamplePlug
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'native\StarSimCore.Native\include\starsim_core_plugin.h') -Destination $sdkIncludeDestination -Force
 
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'RELEASE_README.md') -Destination (Join-Path $publishRoot 'README.md') -Force
+Copy-Item -LiteralPath $releaseNotesSource -Destination (Join-Path $publishRoot 'RELEASE_NOTES.md') -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'CHANGELOG.md') -Destination $publishRoot -Force
 $legalFiles = @('LICENSE', 'NOTICE', 'SECURITY.md', 'THIRD_PARTY_NOTICES.md')
 foreach ($legalFile in $legalFiles) {
     $source = Join-Path $repositoryRoot $legalFile
@@ -102,6 +108,14 @@ foreach ($legalFile in $legalFiles) {
 }
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'LICENSE') -Destination $sdkDestination -Force
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'NOTICE') -Destination $sdkDestination -Force
+
+$documentationDestination = Join-Path $publishRoot 'docs'
+New-Item -ItemType Directory -Force -Path $documentationDestination | Out-Null
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs\MODULE_GUIDE_RO.md') -Destination $documentationDestination -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs\MODULE_GUIDE_EN.md') -Destination $documentationDestination -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs\PROCESSING_ENGINE_MATH.md') -Destination $documentationDestination -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs\PRESET_ENGINE_V1.md') -Destination $documentationDestination -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs\BATCH_PROCESSING.md') -Destination $documentationDestination -Force
 
 $licensesDestination = Join-Path $publishRoot 'licenses'
 New-Item -ItemType Directory -Force -Path $licensesDestination | Out-Null
@@ -156,12 +170,19 @@ $requiredPaths = @(
     'tiff.dll',
     'z.dll',
     'README.md',
+    'RELEASE_NOTES.md',
+    'CHANGELOG.md',
     'LICENSE',
     'NOTICE',
     'SECURITY.md',
     'THIRD_PARTY_NOTICES.md',
     'plugins\starsim_diagnostic_plugin.dll',
     'presets\builtin',
+    'docs\MODULE_GUIDE_RO.md',
+    'docs\MODULE_GUIDE_EN.md',
+    'docs\PROCESSING_ENGINE_MATH.md',
+    'docs\PRESET_ENGINE_V1.md',
+    'docs\BATCH_PROCESSING.md',
     'sdk\PLUGIN_SDK.md',
     'sdk\include\starsim_core_plugin.h'
 )

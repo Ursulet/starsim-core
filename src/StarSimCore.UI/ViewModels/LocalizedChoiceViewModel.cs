@@ -3,7 +3,7 @@ using StarSimCore.Application.Localization;
 
 namespace StarSimCore.UI.ViewModels;
 
-public sealed class LocalizedChoiceViewModel<T> : ObservableObject where T : notnull
+public sealed class LocalizedChoiceViewModel<T> : ObservableObject, IDisposable where T : notnull
 {
     public LocalizedChoiceViewModel(T value, string resourceKey)
     {
@@ -18,6 +18,8 @@ public sealed class LocalizedChoiceViewModel<T> : ObservableObject where T : not
 
     private void OnLanguageChanged(object? sender, EventArgs e) =>
         OnPropertyChanged(nameof(DisplayName));
+
+    public void Dispose() => LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
 
     public override string ToString() => DisplayName;
 }

@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private const string HistogramWindowKey = "$histogram";
     private const string PluginManagerWindowKey = "$plugins";
     private const string HelpWindowKey = "$help";
+    private const string BatchWindowKey = "$batch";
     private readonly Dictionary<string, Window> openToolWindows = new();
     private readonly PluginService? pluginService;
     private readonly PluginInstallationService pluginInstallationService;
@@ -51,6 +52,7 @@ public partial class MainWindow : Window
         AddHandler(InputElement.PointerPressedEvent, ParameterSlider_PointerPressed, RoutingStrategies.Tunnel);
         AddHandler(InputElement.PointerReleasedEvent, ParameterSlider_PointerReleased, RoutingStrategies.Tunnel);
         AddHandler(InputElement.PointerCaptureLostEvent, ParameterSlider_PointerCaptureLost, RoutingStrategies.Tunnel);
+        AddHandler(InputElement.KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel);
         Opened += async (_, _) =>
         {
             await Task.Delay(250);
@@ -116,6 +118,78 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel viewModel)
             OpenUtilityWindow(PerformanceWindowKey, () => new PerformanceSettingsWindow(viewModel));
+    }
+
+    private async void OpenBatchProcessing_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel) return;
+
+        if (openToolWindows.TryGetValue(BatchWindowKey, out var activeBatch) &&
+            activeBatch.DataContext is BatchProcessingViewModel { IsRunning: true })
+        {
+            activeBatch.Activate();
+            return;
+        }
+
+        if (viewModel.IsBatchReferenceSessionActive)
+        {
+            var sourceFolder = viewModel.StagedBatchSourceFolder;
+            var sourcePaths = viewModel.StagedBatchSourcePaths.ToArray();
+            if (!string.IsNullOrWhiteSpace(sourceFolder) && sourcePaths.Length > 0)
+            {
+                StartPreparedBatch(viewModel, sourceFolder, sourcePaths);
+                viewModel.ClearBatchReferenceSession();
+            }
+            return;
+        }
+
+        var selectedFolder = await SelectBatchSourceFolderAsync();
+        if (string.IsNullOrWhiteSpace(selectedFolder)) return;
+
+        if (!viewModel.IsImageLoaded)
+        {
+            await viewModel.BeginBatchReferenceSessionAsync(selectedFolder);
+            return;
+        }
+
+        StartPreparedBatch(viewModel, selectedFolder, sourcePaths: null);
+    }
+
+    private async Task<string?> SelectBatchSourceFolderAsync()
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions
+            {
+                Title = LocalizationService.Instance["FilePicker.BatchSourceFolder"],
+                AllowMultiple = false,
+            });
+        return folders.Count == 1 ? folders[0].TryGetLocalPath() : null;
+    }
+
+    private void StartPreparedBatch(
+        MainWindowViewModel mainViewModel,
+        string sourceFolder,
+        IReadOnlyList<string>? sourcePaths)
+    {
+        if (openToolWindows.Remove(BatchWindowKey, out var existing))
+            existing.Close();
+
+        var batchViewModel = new BatchProcessingViewModel(
+            mainViewModel.ActivePipelineSnapshot,
+            mainViewModel.ProcessorDefinitions,
+            initialFormat: mainViewModel.SelectedExportFormat);
+        if (sourcePaths is null)
+            batchViewModel.SetSourceFolder(sourceFolder);
+        else
+            batchViewModel.SetSourceFiles(sourceFolder, sourcePaths);
+
+        var window = new BatchProcessingWindow(batchViewModel);
+        openToolWindows[BatchWindowKey] = window;
+        window.Closed += (_, _) => openToolWindows.Remove(BatchWindowKey);
+        window.Show(this);
+
+        if (batchViewModel.CanStart)
+            _ = batchViewModel.StartPreparedBatchAsync();
     }
 
     private void OpenHistogramWindow_Click(object? sender, RoutedEventArgs e)
@@ -184,8 +258,14 @@ public partial class MainWindow : Window
     private void OpenUnsharpMaskTool_Click(object? sender, RoutedEventArgs e) => OpenModuleById(BuiltInProcessors.UnsharpMaskId);
     private void OpenMultiScaleSharpenTool_Click(object? sender, RoutedEventArgs e) => OpenModuleById(BuiltInProcessors.MultiScaleSharpenId);
     private void Exit_Click(object? sender, RoutedEventArgs e) => Close();
-    private void FullScreen_Click(object? sender, RoutedEventArgs e) =>
-        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
+    private void FullScreen_Click(object? sender, RoutedEventArgs e)
+    {
+        // Use the native maximized state instead of borderless FullScreen so the
+        // Windows minimize, maximize/restore and close buttons remain available.
+        WindowState = WindowState is WindowState.Maximized or WindowState.FullScreen
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
     private void OpenHelpWindow(int selectedTab)
     {
         if (openToolWindows.TryGetValue(HelpWindowKey, out var existing) &&
@@ -221,6 +301,70 @@ public partial class MainWindow : Window
     {
         if ((sender is Slider || e.Source is Slider) && DataContext is MainWindowViewModel viewModel)
             viewModel.EndParameterInteraction();
+    }
+
+    private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel) return;
+
+        var modifiers = e.KeyModifiers;
+        var controlOnly = modifiers == KeyModifiers.Control;
+        var controlShift = modifiers == (KeyModifiers.Control | KeyModifiers.Shift);
+
+        // Preserve ordinary text editing Undo/Redo inside numeric and search fields.
+        if (e.Source is TextBox &&
+            ((controlOnly && (e.Key == Key.Z || e.Key == Key.Y)) ||
+             (controlShift && e.Key == Key.Z)))
+            return;
+
+        bool Execute(System.Windows.Input.ICommand command)
+        {
+            if (!command.CanExecute(null)) return false;
+            command.Execute(null);
+            return true;
+        }
+
+        var handled = true;
+        if (controlOnly && e.Key == Key.O) OpenImage_Click(this, null!);
+        else if (controlOnly && e.Key == Key.P) OpenProject_Click(this, null!);
+        else if (controlOnly && e.Key == Key.S)
+        {
+            if (viewModel.IsImageLoaded) SaveProject_Click(this, null!);
+            else handled = false;
+        }
+        else if (controlOnly && e.Key == Key.E)
+        {
+            if (viewModel.IsImageLoaded) Export_Click(this, null!);
+            else handled = false;
+        }
+        else if (controlOnly && e.Key == Key.Z) handled = Execute(viewModel.UndoCommand);
+        else if ((controlOnly && e.Key == Key.Y) || (controlShift && e.Key == Key.Z))
+            handled = Execute(viewModel.RedoCommand);
+        else if (controlOnly && e.Key == Key.B) handled = Execute(viewModel.ToggleComparisonCommand);
+        else if (controlShift && e.Key == Key.B)
+        {
+            OpenBatchProcessing_Click(this, null!);
+        }
+        else if (controlOnly && e.Key == Key.H) handled = Execute(viewModel.ToggleHistoryPanelCommand);
+        else if (controlShift && e.Key == Key.C) handled = Execute(viewModel.ToggleClippingWarningCommand);
+        else if (controlOnly && e.Key == Key.R) handled = Execute(viewModel.ToggleRoiSelectionCommand);
+        else if (controlOnly && e.Key == Key.Enter) handled = Execute(viewModel.ApplyRoiToFullImageCommand);
+        else if (controlOnly && e.Key == Key.D0) handled = Execute(viewModel.FitCommand);
+        else if ((controlOnly && (e.Key == Key.Add || e.Key == Key.OemPlus)) ||
+                 (controlShift && e.Key == Key.OemPlus))
+            handled = Execute(viewModel.ZoomInCommand);
+        else if (controlOnly && (e.Key == Key.Subtract || e.Key == Key.OemMinus))
+            handled = Execute(viewModel.ZoomOutCommand);
+        else if (controlOnly && e.Key == Key.F1) Help_Click(this, null!);
+        else if (modifiers == KeyModifiers.None && e.Key == Key.F1) handled = Execute(viewModel.ShowBeginnerCommand);
+        else if (modifiers == KeyModifiers.None && e.Key == Key.F2) handled = Execute(viewModel.ShowExpertCommand);
+        else if (modifiers == KeyModifiers.None && e.Key == Key.F11) FullScreen_Click(this, null!);
+        else if (modifiers == KeyModifiers.None && e.Key == Key.Escape &&
+                 (viewModel.IsRoiSelectionEnabled || viewModel.IsHistoryPanelVisible || viewModel.IsPerformanceSettingsVisible))
+            handled = Execute(viewModel.CancelTransientUiCommand);
+        else handled = false;
+
+        e.Handled = handled;
     }
 
     private async void OpenImage_Click(object? sender, RoutedEventArgs e)

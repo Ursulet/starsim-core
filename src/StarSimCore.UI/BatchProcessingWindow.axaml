@@ -1,0 +1,122 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StarSimCore.UI.ViewModels"
+        xmlns:loc="using:StarSimCore.UI.Localization"
+        x:Class="StarSimCore.UI.BatchProcessingWindow"
+        x:DataType="vm:BatchProcessingViewModel"
+        Title="{loc:Localize Key=Batch.Title}"
+        Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
+        Width="920" Height="760" MinWidth="760" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Closing="Window_Closing"
+        Closed="Window_Closed">
+  <Grid RowDefinitions="76,*,64">
+    <Border Classes="panel-header" Padding="18,0">
+      <Grid ColumnDefinitions="Auto,*">
+        <Border Width="42" Height="42" CornerRadius="9" Background="#102B3E" BorderBrush="#245978" BorderThickness="1" Margin="0,0,13,0">
+          <TextBlock Text="▦" FontSize="22" Foreground="#83CCFA" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+          <TextBlock Text="{loc:Localize Key=Batch.Header}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{loc:Localize Key=Batch.Subtitle}" Foreground="#7899B1" FontSize="10.5" TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="18,14,18,12" RowSpacing="10">
+      <Border Grid.Row="0" Classes="module-card prominent" Padding="14">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+          <TextBlock Text="◆" Foreground="#58BFFF" FontSize="18" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Spacing="3">
+            <TextBlock Text="{loc:Localize Key=Batch.Template.Title}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SnapshotSummary}" Classes="secondary" FontFamily="Consolas" FontSize="10.5" TextWrapping="Wrap" />
+            <TextBlock Text="{loc:Localize Key=Batch.Template.Help}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="1" Classes="module-card" Padding="14">
+        <Grid ColumnDefinitions="150,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="9" ColumnSpacing="10">
+          <TextBlock Text="{loc:Localize Key=Batch.SourceFolder}" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" Text="{Binding SourceFolder}" IsReadOnly="True" Watermark="{loc:Localize Key=Batch.SourcePlaceholder}" />
+          <Button Grid.Column="2" Content="{loc:Localize Key=Common.Browse}" Click="SelectSourceFolder_Click" IsEnabled="{Binding CanEdit}" MinWidth="105" />
+
+          <TextBlock Grid.Row="1" Text="{loc:Localize Key=Batch.DestinationFolder}" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DestinationFolder}" IsReadOnly="True" Watermark="{loc:Localize Key=Batch.DestinationPlaceholder}" />
+          <Button Grid.Row="1" Grid.Column="2" Content="{loc:Localize Key=Common.Browse}" Click="SelectDestinationFolder_Click" IsEnabled="{Binding CanEdit}" MinWidth="105" />
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="2" Classes="module-card" Padding="14">
+        <Grid ColumnDefinitions="150,230,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="7">
+          <TextBlock Text="{loc:Localize Key=Batch.OutputFormat}" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <ComboBox Grid.Column="1" ItemsSource="{Binding FormatOptions}" SelectedItem="{Binding SelectedFormatOption}" IsEnabled="{Binding CanEdit}">
+            <ComboBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <CheckBox Grid.Column="2" Content="{loc:Localize Key=Batch.Overwrite}" IsChecked="{Binding OverwriteExisting}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding NamingExample}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="3" Classes="module-card" Padding="14">
+        <StackPanel Spacing="7">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding CurrentStatusText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Grid.Column="1" Text="{Binding OverallPercent, StringFormat={}{0:0}%}" Foreground="#83CCFA" FontFamily="Consolas" />
+          </Grid>
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding OverallPercent}" Height="8" />
+          <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCurrentFile}">
+            <TextBlock Text="{Binding CurrentFileName}" Classes="secondary" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="1" Text="{Binding FilePercent, StringFormat={}{0:0}%}" Classes="muted" FontFamily="Consolas" />
+          </Grid>
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <TextBlock Text="{Binding CompletedCountText}" Foreground="#63D69A" />
+            <TextBlock Text="{Binding FailedCountText}" Foreground="#FF817A" />
+            <TextBlock Text="{Binding SkippedCountText}" Foreground="#E6BC61" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="4" Classes="module-card" Padding="0" ClipToBounds="True">
+        <Grid RowDefinitions="38,*">
+          <Border Background="#08131C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,0">
+            <Grid ColumnDefinitions="42,2*,1.35*,100,120" ColumnSpacing="10">
+              <TextBlock Text="#" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{loc:Localize Key=Batch.Column.Source}" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Text="{loc:Localize Key=Batch.Column.Output}" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="3" Text="{loc:Localize Key=Batch.Column.Status}" Classes="muted" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="4" Text="{loc:Localize Key=Batch.Column.Detail}" Classes="muted" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Files}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BatchFileViewModel">
+                  <Border BorderBrush="#172A39" BorderThickness="0,0,0,1" Padding="12,8">
+                    <Grid ColumnDefinitions="42,2*,1.35*,100,120" ColumnSpacing="10">
+                      <TextBlock Text="{Binding Index}" Classes="muted" FontFamily="Consolas" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding SourcePath}" />
+                      <TextBlock Grid.Column="2" Text="{Binding OutputName}" Classes="secondary" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="#83CCFA" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="4" Text="{Binding DetailText}" Classes="muted" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding DetailText}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="#07121C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="18,0">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="9">
+        <TextBlock Text="{Binding FileCountText}" Classes="secondary" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="{loc:Localize Key=Common.Close}" Click="Close_Click" IsEnabled="{Binding !IsRunning}" MinWidth="105" VerticalAlignment="Center" />
+        <Button Grid.Column="2" Content="{loc:Localize Key=Common.Cancel}" Command="{Binding CancelBatchCommand}" IsEnabled="{Binding CanCancel}" MinWidth="105" VerticalAlignment="Center" />
+        <Button Grid.Column="3" Content="{loc:Localize Key=Batch.Start}" Command="{Binding StartBatchCommand}" IsEnabled="{Binding CanStart}" Classes="primary" MinWidth="150" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

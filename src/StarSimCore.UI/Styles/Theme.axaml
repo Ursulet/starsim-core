@@ -319,6 +319,11 @@
   <Style Selector="Button.header-icon">
     <Setter Property="Width" Value="30" /><Setter Property="Height" Value="30" /><Setter Property="MinWidth" Value="30" /><Setter Property="MinHeight" Value="30" /><Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="FontSize" Value="15" />
   </Style>
+  <Style Selector="Button.header-action">
+    <Setter Property="MinHeight" Value="28" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="9,2" /><Setter Property="Background" Value="#0A1722" /><Setter Property="BorderBrush" Value="#1E3546" /><Setter Property="CornerRadius" Value="5" /><Setter Property="FontSize" Value="10" />
+  </Style>
+  <Style Selector="Button.header-action:pointerover"><Setter Property="Background" Value="#11283A" /><Setter Property="BorderBrush" Value="#315C78" /></Style>
+  <Style Selector="Button.header-action.active"><Setter Property="Background" Value="#10324A" /><Setter Property="BorderBrush" Value="#27A9FF" /><Setter Property="Foreground" Value="#69C5FF" /></Style>
   <Style Selector="Border.rail-card">
     <Setter Property="Background" Value="#08131D" /><Setter Property="BorderBrush" Value="#203747" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="8" />
   </Style>
@@ -328,6 +333,18 @@
   <Style Selector="Border.processing-flyout">
     <Setter Property="Background" Value="#0B1925F2" /><Setter Property="BorderBrush" Value="#2B6E99" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="7" /><Setter Property="Padding" Value="12,9" />
   </Style>
+  <Style Selector="Border.roi-status">
+    <Setter Property="Background" Value="#0B1925F2" /><Setter Property="BorderBrush" Value="#27A9FF" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="7" /><Setter Property="Padding" Value="11,8" />
+  </Style>
+  <Style Selector="Border.history-panel">
+    <Setter Property="Background" Value="#0A1722F7" /><Setter Property="BorderBrush" Value="#315C78" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="8" /><Setter Property="BoxShadow" Value="0 8 24 0 #90000000" />
+  </Style>
+  <Style Selector="Button.history-row">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="MinHeight" Value="48" /><Setter Property="Padding" Value="8,6" /><Setter Property="Margin" Value="0,0,0,4" /><Setter Property="Background" Value="#08131D" /><Setter Property="BorderBrush" Value="#1D3444" /><Setter Property="CornerRadius" Value="5" />
+  </Style>
+  <Style Selector="Button.history-row:pointerover"><Setter Property="Background" Value="#10283A" /><Setter Property="BorderBrush" Value="#315C78" /></Style>
+  <Style Selector="Button.history-row.active"><Setter Property="Background" Value="#0C2A3E" /><Setter Property="BorderBrush" Value="#27A9FF" /></Style>
+  <Style Selector="Button.compact-action"><Setter Property="MinHeight" Value="29" /><Setter Property="Padding" Value="9,3" /><Setter Property="FontSize" Value="10" /></Style>
   <Style Selector="Border.status-bar">
     <Setter Property="Background" Value="#07121C" /><Setter Property="BorderBrush" Value="#203747" /><Setter Property="BorderThickness" Value="0,1,0,0" />
   </Style>

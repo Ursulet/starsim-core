@@ -1,10 +1,10 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$')]
-    [string]$Version = '0.9.0-beta.1',
+    [string]$Version = '1.0.0',
 
     [ValidatePattern('^\d+\.\d+\.\d+\.\d+$')]
-    [string]$NumericVersion = '0.9.0.0',
+    [string]$NumericVersion = '1.0.0.0',
 
     [switch]$SkipNativeBuild,
     [switch]$PrepareOnly,
@@ -22,6 +22,8 @@ $prerequisiteRoot = Join-Path $installerOutput 'prerequisites'
 $vcRedistPath = Join-Path $prerequisiteRoot 'vc_redist.x64.exe'
 $portableArchive = Join-Path $repositoryRoot "artifacts\package\StarSimCore-$Version-win-x64-portable.zip"
 $setupPath = Join-Path $installerOutput "StarSimCore-Setup-$Version-win-x64.exe"
+$releaseNotesSource = Join-Path $repositoryRoot "releases\$Version.md"
+$releaseReadmePath = Join-Path $installerOutput "StarSimCore-Setup-$Version-win-x64-README.md"
 
 & (Join-Path $PSScriptRoot 'publish-release.ps1') `
     -Version $Version `
@@ -47,6 +49,11 @@ if ($vcSignature.Status -ne [System.Management.Automation.SignatureStatus]::Vali
     $vcSignature.SignerCertificate.Subject -notmatch 'Microsoft') {
     throw 'The Visual C++ runtime does not have a valid Microsoft Authenticode signature. It will not be packaged.'
 }
+
+if (-not (Test-Path -LiteralPath $releaseNotesSource)) {
+    throw "Release notes are missing: $releaseNotesSource"
+}
+Copy-Item -LiteralPath $releaseNotesSource -Destination $releaseReadmePath -Force
 
 if ($PrepareOnly) {
     Write-Host ''
@@ -101,4 +108,5 @@ Write-Host ''
 Write-Host 'StarSim Core installer created successfully.' -ForegroundColor Green
 Write-Host "Installer: $setupPath"
 Write-Host "Portable:  $portableArchive"
+Write-Host "Readme:    $releaseReadmePath"
 Write-Host "Checksums: $checksumPath"

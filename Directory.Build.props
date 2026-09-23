@@ -6,6 +6,10 @@
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
     <Authors>Gîrdeanu Ștefan Victor; Asociația Star Sim</Authors>
     <Company>Asociația Star Sim</Company>
     <Copyright>Copyright © 2026 Gîrdeanu Ștefan Victor and Asociația Star Sim</Copyright>

@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StarSimCore.Application;
+using StarSimCore.Application.Batch;
 using StarSimCore.Application.Export;
 using StarSimCore.Application.Imaging;
 using StarSimCore.Application.Presets;
@@ -26,7 +27,7 @@ namespace StarSimCore.UI.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
-    private static readonly double[] ZoomStops = [0.25, 0.5, 1, 2, 4];
+    private static readonly double[] ZoomStops = [0.25, 0.5, 1, 2, 4, 8, 16];
     private readonly WorkspaceState state;
     private readonly IReadOnlyList<IImageProcessor> processorDefinitions;
     private readonly ImageOpenService imageOpenService = new();
@@ -41,6 +42,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? openCancellation;
     private CancellationTokenSource? exportCancellation;
     private ImageDocument? document;
+    private ImageDocument? roiDocument;
+    private byte[]? fullOriginalPixelsBeforeRoi;
+    private byte[]? fullProcessedPixelsBeforeRoi;
+    private Rect activeRoiRect;
+    private long roiGeneration;
+    private Task roiActivationTask = Task.CompletedTask;
+    private bool suppressRoiChange;
     private long openGeneration;
     private bool suppressProcessing;
     private bool isParameterInteractionActive;
@@ -61,6 +69,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private string modeSwitchFrom = "Beginner";
     private long canonicalParameterWriteCount;
     private readonly Dictionary<string, BeginnerControlState> beginnerStatesByHash = new(StringComparer.Ordinal);
+    private string? stagedBatchSourceFolder;
+    private IReadOnlyList<string> stagedBatchSourcePaths = Array.Empty<string>();
 
     private sealed record BeginnerControlState(
         string Target,
@@ -85,7 +95,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             throw new InvalidOperationException("The active processor registry contains duplicate IDs.");
         }
         processingService = new ImageProcessingService(resourceGovernor, processorDefinitions);
-        exportService = new ExportService(processorDefinitions);
+        exportService = new ExportService(processorDefinitions, resourceGovernor);
         customPresetStore = new CustomPresetStore(processorDefinitions: processorDefinitions);
         state = new WorkspaceState { IsExpertMode = startInExpertMode };
         isExpertMode = state.IsExpertMode;
@@ -197,6 +207,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RememberBeginnerState(history.Current);
         RefreshCustomPresets();
         UpdateMultiSharpeningWarning();
+        RefreshHistoryStates();
     }
 
     public IReadOnlyList<ExportFormat> AvailableExportFormats { get; } = [ExportFormat.Tiff16, ExportFormat.Png16, ExportFormat.Png8];
@@ -285,9 +296,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         set { if (value is not null) SelectedInteractivePreviewQuality = value.Value; }
     }
     public IReadOnlyList<ProcessorModuleViewModel> PipelineModules { get; }
+    internal IReadOnlyList<IImageProcessor> ProcessorDefinitions => processorDefinitions;
     public IReadOnlyList<ProcessorModuleViewModel> ExpertModules { get; }
     public IReadOnlyList<ProcessorCategoryGroupViewModel> CategoryGroups { get; }
     public IReadOnlyList<ProcessingPanelGroupViewModel> ProcessingGroups { get; }
+    public bool IsBatchReferenceSessionActive => stagedBatchSourcePaths.Count > 0;
+    public IReadOnlyList<string> StagedBatchSourcePaths => stagedBatchSourcePaths;
+    public string? StagedBatchSourceFolder => stagedBatchSourceFolder;
+    public string BatchToolbarText => LocalizationService.Instance[
+        IsBatchReferenceSessionActive ? "Toolbar.Batch.Apply" : "Toolbar.Batch"];
+    public string BatchToolbarTip => LocalizationService.Instance[
+        IsBatchReferenceSessionActive ? "Toolbar.Batch.ApplyTip" : "Toolbar.Batch.Tip"];
 
     [ObservableProperty] private bool isMultiSharpeningWarningVisible;
     public string MultiSharpeningWarningText => LocalizationService.Instance["Warning.MultiSharpening"];
@@ -319,11 +338,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ResolvedCpuThreads));
         OnPropertyChanged(nameof(ResolvedMemoryLimit));
         OnPropertyChanged(nameof(ResourceDiagnostics));
+        OnPropertyChanged(nameof(RoiSummary));
         OnPropertyChanged(nameof(SelectedTargetOption));
         OnPropertyChanged(nameof(SelectedPresetOption));
         OnPropertyChanged(nameof(SelectedColorPresetOption));
         OnPropertyChanged(nameof(SelectedPerformanceProfileOption));
         OnPropertyChanged(nameof(SelectedInteractivePreviewQualityOption));
+        OnPropertyChanged(nameof(BatchToolbarText));
+        OnPropertyChanged(nameof(BatchToolbarTip));
         if (!IsProcessing && !IsExporting)
         {
             ProcessingStatusText = IsImageLoaded
@@ -332,6 +354,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         PixelReadout = LocalizationService.Instance["Viewer.PixelHint"];
         ApplyModuleFilter();
+        RefreshHistoryStates();
     }
 
     public bool IsBeginnerMode => !IsExpertMode;
@@ -470,6 +493,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool isPreviewEnabled = true;
     [ObservableProperty] private double comparisonSplit = 0.5;
     [ObservableProperty] private string pixelReadout = LocalizationService.Instance["Viewer.PixelHint"];
+    [ObservableProperty] private bool isClippingWarningEnabled;
+    [ObservableProperty] private bool isRoiSelectionEnabled;
+    [ObservableProperty] private Rect roiImageRect;
+    [ObservableProperty] private bool isHistoryPanelVisible;
     [ObservableProperty] private HistogramData? histogram;
     [ObservableProperty] private bool isPerformanceSettingsVisible;
     [ObservableProperty] private PerformanceProfile selectedPerformanceProfile;
@@ -481,6 +508,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int manualMaxThreads;
     [ObservableProperty] private double manualMemoryBudgetGb;
     [ObservableProperty] private string moduleSearchText = string.Empty;
+    public ObservableCollection<HistoryStateViewModel> HistoryStates { get; } = [];
+    public bool IsRoiActive => roiDocument is not null;
+    public string RoiSummary => IsRoiActive
+        ? LocalizationService.Instance.GetString(
+            "Roi.ActiveSummary",
+            (int)activeRoiRect.X,
+            (int)activeRoiRect.Y,
+            (int)activeRoiRect.Width,
+            (int)activeRoiRect.Height)
+        : LocalizationService.Instance["Roi.Inactive"];
 
     partial void OnModuleSearchTextChanged(string value) => ApplyModuleFilter();
 
@@ -639,9 +676,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     partial void OnManualMaxThreadsChanged(int value) => ApplyResourceSettings();
     partial void OnManualMemoryBudgetGbChanged(double value) => ApplyResourceSettings();
 
+    partial void OnRoiImageRectChanged(Rect value)
+    {
+        if (suppressRoiChange || document is null || value.Width < 1 || value.Height < 1) return;
+        roiActivationTask = ActivateRoiAsync(value);
+    }
+
     public async Task OpenImageAsync(string path)
     {
+        ClearBatchReferenceSession();
         var generation = Interlocked.Increment(ref openGeneration);
+        Interlocked.Increment(ref roiGeneration);
         StopPendingParameterInteraction();
         openCancellation?.Cancel();
         openCancellation?.Dispose();
@@ -660,6 +705,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (generation != Volatile.Read(ref openGeneration) || token.IsCancellationRequested)
                 return;
 
+            await roiActivationTask;
+            if (generation != Volatile.Read(ref openGeneration) || token.IsCancellationRequested)
+                return;
+
             var nextOriginalPixels = pendingDocument.RenderOriginalBgra8();
             var nextProcessedPixels = pendingDocument.RenderProcessedBgra8();
             var metadata = pendingDocument.Source.Metadata;
@@ -674,6 +723,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (generation != Volatile.Read(ref openGeneration) || token.IsCancellationRequested)
                 return;
 
+            ResetRoiStateAfterSchedulerIdle();
             document?.Dispose();
             OriginalBitmap?.Dispose();
             ProcessedBitmap?.Dispose();
@@ -726,10 +776,99 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    public async Task<bool> BeginBatchReferenceSessionAsync(string sourceFolder)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFolder);
+        ClearBatchReferenceSession();
+
+        IReadOnlyList<string> sources;
+        try
+        {
+            sources = BatchProcessingService.EnumerateSources(sourceFolder);
+        }
+        catch (Exception exception)
+        {
+            ProcessingStatusText = LocalizationService.Instance.GetString(
+                "Batch.Status.SourceError",
+                exception.Message);
+            return false;
+        }
+
+        if (sources.Count == 0)
+        {
+            ProcessingStatusText = LocalizationService.Instance["Batch.Status.NoFiles"];
+            return false;
+        }
+
+        var firstSource = sources[0];
+        await OpenImageAsync(firstSource);
+        if (document is null ||
+            !string.Equals(
+                document.Source.CanonicalPath,
+                Path.GetFullPath(firstSource),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        stagedBatchSourceFolder = Path.GetFullPath(sourceFolder);
+        stagedBatchSourcePaths = sources.ToArray();
+        NotifyBatchReferenceChanged();
+        ProcessingStatusText = LocalizationService.Instance.GetString(
+            "Batch.Reference.Ready",
+            Path.GetFileName(firstSource),
+            sources.Count);
+        return true;
+    }
+
+    public void ClearBatchReferenceSession()
+    {
+        if (!IsBatchReferenceSessionActive && string.IsNullOrWhiteSpace(stagedBatchSourceFolder)) return;
+        stagedBatchSourceFolder = null;
+        stagedBatchSourcePaths = Array.Empty<string>();
+        NotifyBatchReferenceChanged();
+    }
+
+    private void NotifyBatchReferenceChanged()
+    {
+        OnPropertyChanged(nameof(IsBatchReferenceSessionActive));
+        OnPropertyChanged(nameof(StagedBatchSourcePaths));
+        OnPropertyChanged(nameof(StagedBatchSourceFolder));
+        OnPropertyChanged(nameof(BatchToolbarText));
+        OnPropertyChanged(nameof(BatchToolbarTip));
+    }
+
     [RelayCommand] private void ShowBeginner() => IsExpertMode = false;
     [RelayCommand] private void ShowExpert() => IsExpertMode = true;
     [RelayCommand] private void TogglePerformanceSettings() => IsPerformanceSettingsVisible = !IsPerformanceSettingsVisible;
     [RelayCommand] private void ClosePerformanceSettings() => IsPerformanceSettingsVisible = false;
+    [RelayCommand(CanExecute = nameof(IsImageLoaded))]
+    private void ToggleHistoryPanel()
+    {
+        IsHistoryPanelVisible = !IsHistoryPanelVisible;
+        if (IsHistoryPanelVisible) RefreshHistoryStates();
+    }
+    [RelayCommand] private void CloseHistoryPanel() => IsHistoryPanelVisible = false;
+    [RelayCommand]
+    private void CancelTransientUi()
+    {
+        if (IsRoiSelectionEnabled)
+        {
+            IsRoiSelectionEnabled = false;
+            return;
+        }
+        if (IsHistoryPanelVisible)
+        {
+            IsHistoryPanelVisible = false;
+            return;
+        }
+        if (IsPerformanceSettingsVisible)
+            IsPerformanceSettingsVisible = false;
+    }
+    [RelayCommand(CanExecute = nameof(IsImageLoaded))]
+    private void ToggleClippingWarning() => IsClippingWarningEnabled = !IsClippingWarningEnabled;
+    [RelayCommand(CanExecute = nameof(CanSelectRoi))]
+    private void ToggleRoiSelection() => IsRoiSelectionEnabled = !IsRoiSelectionEnabled;
     [RelayCommand] private void ClearModuleSearch() => ModuleSearchText = string.Empty;
     [RelayCommand]
     private void CancelProcessing()
@@ -738,6 +877,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         processingService.CancelActive(NativeCancellationReason.UserRequested);
     }
     [RelayCommand(CanExecute = nameof(IsImageLoaded))] private void ToggleComparison() => IsComparisonEnabled = !IsComparisonEnabled;
+
+    private bool CanSelectRoi() => IsImageLoaded && !IsRoiActive;
 
     [RelayCommand(CanExecute = nameof(IsImageLoaded))]
     private void Fit()
@@ -823,6 +964,59 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             NotifyHistoryChanged();
             QueueProcessing();
         }
+    }
+
+    private void SelectHistoryState(int index)
+    {
+        if (!history.JumpToTimelineIndex(index)) return;
+        TryRestoreBeginnerState(history.Current);
+        ApplySnapshotToControls(history.Current);
+        NotifyHistoryChanged();
+        QueueProcessing();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsRoiActive))]
+    private async Task ApplyRoiToFullImage()
+    {
+        var generation = Interlocked.Increment(ref roiGeneration);
+        StopPendingParameterInteraction();
+        await processingService.CancelAndWaitForIdleAsync(NativeCancellationReason.RequestSuperseded);
+        if (generation != Volatile.Read(ref roiGeneration)) return;
+
+        var sourceDocument = document;
+        if (sourceDocument is null) return;
+        var restoredOriginal = fullOriginalPixelsBeforeRoi ?? sourceDocument.RenderOriginalBgra8();
+        var restoredProcessed = fullProcessedPixelsBeforeRoi ?? restoredOriginal.ToArray();
+        var metadata = sourceDocument.Source.Metadata;
+        var restoredOriginalBitmap = CreateBitmap(restoredOriginal, metadata.Width, metadata.Height);
+        var restoredProcessedBitmap = CreateBitmap(restoredProcessed, metadata.Width, metadata.Height);
+
+        roiDocument?.Dispose();
+        roiDocument = null;
+        fullOriginalPixelsBeforeRoi = null;
+        fullProcessedPixelsBeforeRoi = null;
+        activeRoiRect = default;
+        suppressRoiChange = true;
+        try { RoiImageRect = default; }
+        finally { suppressRoiChange = false; }
+        IsRoiSelectionEnabled = false;
+        OriginalBitmap?.Dispose();
+        ProcessedBitmap?.Dispose();
+        OriginalPixels = restoredOriginal;
+        ProcessedPixels = restoredProcessed;
+        OriginalBitmap = restoredOriginalBitmap;
+        ProcessedBitmap = restoredProcessedBitmap;
+        authoritativeProcessedPixels = null;
+        authoritativeSnapshot = null;
+        IsFitToViewer = true;
+        lastScheduledDocument = null;
+        lastScheduledSnapshot = null;
+        lastScheduledQuality = null;
+        OnPropertyChanged(nameof(IsRoiActive));
+        OnPropertyChanged(nameof(RoiSummary));
+        ApplyRoiToFullImageCommand.NotifyCanExecuteChanged();
+        ToggleRoiSelectionCommand.NotifyCanExecuteChanged();
+        QueueProcessing(ProcessingQuality.DefinitivePreview);
     }
 
     [RelayCommand]
@@ -1036,6 +1230,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public async Task OpenProjectAsync(string projectPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        ClearBatchReferenceSession();
         try
         {
             IsBusy = true;
@@ -1125,8 +1320,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task LoadProjectDocumentAndState(ProjectFile project, string? overridePath = null)
     {
+        Interlocked.Increment(ref roiGeneration);
         var snapshot = ProjectService.RestorePipelineSnapshot(project, processorDefinitions);
         var doc = await projectService.OpenProjectDocumentAsync(project, overridePath);
+
+        await roiActivationTask;
+        await processingService.CancelAndWaitForIdleAsync(NativeCancellationReason.RequestSuperseded);
+        ResetRoiStateAfterSchedulerIdle();
 
         var nextOriginalPixels = doc.RenderOriginalBgra8();
         var nextProcessedPixels = doc.RenderProcessedBgra8();
@@ -1269,6 +1469,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(MetadataSummary));
         OnPropertyChanged(nameof(AlphaSummary));
         ToggleComparisonCommand.NotifyCanExecuteChanged();
+        ToggleHistoryPanelCommand.NotifyCanExecuteChanged();
+        ToggleClippingWarningCommand.NotifyCanExecuteChanged();
+        ToggleRoiSelectionCommand.NotifyCanExecuteChanged();
+        ApplyRoiToFullImageCommand.NotifyCanExecuteChanged();
         FitCommand.NotifyCanExecuteChanged();
         ZoomInCommand.NotifyCanExecuteChanged();
         ZoomOutCommand.NotifyCanExecuteChanged();
@@ -1726,12 +1930,98 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IsMultiSharpeningWarningVisible = isWaveletBoosted && isOtherSharpeningActive;
     }
 
+    private void RefreshHistoryStates()
+    {
+        if (history is null || PipelineModules is null) return;
+        var timeline = history.Timeline;
+        HistoryStates.Clear();
+        for (var index = 0; index < timeline.Count; index++)
+        {
+            var entry = timeline[index];
+            var title = index == 0
+                ? LocalizationService.Instance["History.InitialState"]
+                : DescribeHistoryChange(timeline[index - 1].Snapshot, entry.Snapshot, entry.Description);
+            var details = LocalizationService.Instance.GetString(
+                "History.EntryDetails",
+                entry.Snapshot.Revision,
+                entry.Timestamp.ToLocalTime().ToString("HH:mm:ss"));
+            HistoryStates.Add(new HistoryStateViewModel(
+                index,
+                title,
+                details,
+                index == history.CurrentTimelineIndex,
+                SelectHistoryState));
+        }
+    }
+
+    private string DescribeHistoryChange(PipelineSnapshot before, PipelineSnapshot after, string fallback)
+    {
+        var changes = new List<(ProcessorState Before, ProcessorState After)>();
+        for (var index = 0; index < Math.Min(before.Modules.Length, after.Modules.Length); index++)
+        {
+            if (!ProcessorStatesEqual(before.Modules[index], after.Modules[index]))
+                changes.Add((before.Modules[index], after.Modules[index]));
+        }
+
+        if (changes.Count == 1)
+        {
+            var change = changes[0];
+            var module = PipelineModules.FirstOrDefault(candidate => candidate.Id == change.After.Id);
+            var moduleName = module?.DisplayName ?? change.After.Id;
+            if (change.Before.Enabled != change.After.Enabled &&
+                ParametersEqual(change.Before.Parameters, change.After.Parameters))
+            {
+                return LocalizationService.Instance.GetString(
+                    change.After.Enabled ? "History.EnabledModule" : "History.DisabledModule",
+                    moduleName);
+            }
+
+            var changedParameters = Enumerable.Range(0, Math.Min(change.Before.Parameters.Length, change.After.Parameters.Length))
+                .Where(parameter => BitConverter.DoubleToInt64Bits(change.Before.Parameters[parameter]) !=
+                    BitConverter.DoubleToInt64Bits(change.After.Parameters[parameter]))
+                .ToArray();
+            if (changedParameters.Length == 1 && module is not null)
+            {
+                var parameter = module.Parameters[changedParameters[0]];
+                return LocalizationService.Instance.GetString(
+                    "History.AdjustedParameter",
+                    moduleName,
+                    parameter.CompactName);
+            }
+
+            return LocalizationService.Instance.GetString("History.ModifiedModule", moduleName);
+        }
+
+        if (fallback.StartsWith("Reset All", StringComparison.OrdinalIgnoreCase))
+            return LocalizationService.Instance["History.ResetAll"];
+        if (fallback.StartsWith("Custom Preset", StringComparison.OrdinalIgnoreCase))
+            return LocalizationService.Instance["History.AppliedPreset"];
+        if (changes.Count > 1)
+            return LocalizationService.Instance.GetString("History.ModifiedModules", changes.Count);
+        return LocalizationService.Instance.GetStringOrDefault("History.ParameterChange", fallback);
+    }
+
+    private static bool ProcessorStatesEqual(ProcessorState left, ProcessorState right) =>
+        left.Id == right.Id && left.Enabled == right.Enabled && ParametersEqual(left.Parameters, right.Parameters);
+
+    private static bool ParametersEqual(ImmutableArray<double> left, ImmutableArray<double> right)
+    {
+        if (left.Length != right.Length) return false;
+        for (var index = 0; index < left.Length; index++)
+        {
+            if (BitConverter.DoubleToInt64Bits(left[index]) != BitConverter.DoubleToInt64Bits(right[index]))
+                return false;
+        }
+        return true;
+    }
+
     private void NotifyHistoryChanged()
     {
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
+        if (IsHistoryPanelVisible) RefreshHistoryStates();
     }
 
     public void BeginParameterInteraction()
@@ -1780,7 +2070,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private bool TryApplyFastPreview(PipelineSnapshot target)
     {
-        if (document is null || authoritativeProcessedPixels is null || authoritativeSnapshot is null)
+        if (document is null || roiDocument is not null || authoritativeProcessedPixels is null || authoritativeSnapshot is null)
             return false;
         if (!FastInteractivePreview.TryRender(
                 authoritativeProcessedPixels,
@@ -1806,7 +2096,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async void QueueProcessing(ProcessingQuality quality = ProcessingQuality.DefinitivePreview)
     {
-        var currentDocument = document;
+        var currentDocument = roiDocument ?? document;
         if (currentDocument is null) return;
         var snapshot = history.Current;
         if (ReferenceEquals(lastScheduledDocument, currentDocument) &&
@@ -1817,6 +2107,108 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         lastScheduledSnapshot = snapshot;
         lastScheduledQuality = quality;
         await ProcessCurrentAsync(quality, snapshot);
+    }
+
+    private async Task ActivateRoiAsync(Rect requestedRect)
+    {
+        var sourceDocument = document;
+        if (sourceDocument is null) return;
+        var normalized = NormalizeRoi(requestedRect, sourceDocument.Source.Metadata.Width, sourceDocument.Source.Metadata.Height);
+        if (normalized.Width < 2 || normalized.Height < 2) return;
+
+        var generation = Interlocked.Increment(ref roiGeneration);
+        StopPendingParameterInteraction();
+        ImageDocument? pendingRegion = null;
+        Bitmap? pendingOriginalBitmap = null;
+        Bitmap? pendingProcessedBitmap = null;
+        try
+        {
+            await processingService.CancelAndWaitForIdleAsync(NativeCancellationReason.RequestSuperseded);
+            if (generation != Volatile.Read(ref roiGeneration) || !ReferenceEquals(sourceDocument, document)) return;
+
+            pendingRegion = await Task.Run(() => sourceDocument.CreateRegion(
+                normalized.X,
+                normalized.Y,
+                normalized.Width,
+                normalized.Height));
+            if (generation != Volatile.Read(ref roiGeneration) || !ReferenceEquals(sourceDocument, document)) return;
+
+            var regionOriginalPixels = pendingRegion.RenderOriginalBgra8();
+            var regionProcessedPixels = pendingRegion.RenderProcessedBgra8();
+            var regionMetadata = pendingRegion.Source.Metadata;
+            pendingOriginalBitmap = CreateBitmap(regionOriginalPixels, regionMetadata.Width, regionMetadata.Height);
+            pendingProcessedBitmap = CreateBitmap(regionProcessedPixels, regionMetadata.Width, regionMetadata.Height);
+
+            fullOriginalPixelsBeforeRoi ??= OriginalPixels?.ToArray();
+            fullProcessedPixelsBeforeRoi ??= ProcessedPixels?.ToArray();
+            roiDocument?.Dispose();
+            roiDocument = pendingRegion;
+            pendingRegion = null;
+            activeRoiRect = new Rect(normalized.X, normalized.Y, normalized.Width, normalized.Height);
+            suppressRoiChange = true;
+            try { RoiImageRect = default; }
+            finally { suppressRoiChange = false; }
+            IsRoiSelectionEnabled = false;
+            OriginalBitmap?.Dispose();
+            ProcessedBitmap?.Dispose();
+            OriginalPixels = regionOriginalPixels;
+            ProcessedPixels = regionProcessedPixels;
+            OriginalBitmap = pendingOriginalBitmap;
+            ProcessedBitmap = pendingProcessedBitmap;
+            pendingOriginalBitmap = null;
+            pendingProcessedBitmap = null;
+            authoritativeProcessedPixels = null;
+            authoritativeSnapshot = null;
+            IsFitToViewer = true;
+            lastScheduledDocument = null;
+            lastScheduledSnapshot = null;
+            lastScheduledQuality = null;
+            OnPropertyChanged(nameof(IsRoiActive));
+            OnPropertyChanged(nameof(RoiSummary));
+            ApplyRoiToFullImageCommand.NotifyCanExecuteChanged();
+            ToggleRoiSelectionCommand.NotifyCanExecuteChanged();
+            QueueProcessing(ProcessingQuality.DefinitivePreview);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            ShowProcessingError(exception);
+        }
+        finally
+        {
+            pendingOriginalBitmap?.Dispose();
+            pendingProcessedBitmap?.Dispose();
+            pendingRegion?.Dispose();
+        }
+    }
+
+    private static (uint X, uint Y, uint Width, uint Height) NormalizeRoi(Rect rect, uint imageWidth, uint imageHeight)
+    {
+        var x = (uint)Math.Clamp(Math.Floor(rect.X), 0D, Math.Max(0D, imageWidth - 1D));
+        var y = (uint)Math.Clamp(Math.Floor(rect.Y), 0D, Math.Max(0D, imageHeight - 1D));
+        var right = (uint)Math.Clamp(Math.Ceiling(rect.Right), x + 1D, imageWidth);
+        var bottom = (uint)Math.Clamp(Math.Ceiling(rect.Bottom), y + 1D, imageHeight);
+        return (x, y, right - x, bottom - y);
+    }
+
+    private void ResetRoiStateAfterSchedulerIdle()
+    {
+        Interlocked.Increment(ref roiGeneration);
+        roiDocument?.Dispose();
+        roiDocument = null;
+        fullOriginalPixelsBeforeRoi = null;
+        fullProcessedPixelsBeforeRoi = null;
+        activeRoiRect = default;
+        suppressRoiChange = true;
+        try { RoiImageRect = default; }
+        finally { suppressRoiChange = false; }
+        IsRoiSelectionEnabled = false;
+        OnPropertyChanged(nameof(IsRoiActive));
+        OnPropertyChanged(nameof(RoiSummary));
+        ApplyRoiToFullImageCommand.NotifyCanExecuteChanged();
+        ToggleRoiSelectionCommand.NotifyCanExecuteChanged();
     }
 
     private void OnProcessingProgressChanged(object? sender, ProcessingSchedulerProgress progress)
@@ -1935,22 +2327,26 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task ProcessCurrentAsync(ProcessingQuality quality, PipelineSnapshot snapshot)
     {
-        var currentDocument = document;
+        var currentDocument = roiDocument ?? document;
         if (currentDocument is null) return;
+        var isRoiRequest = ReferenceEquals(currentDocument, roiDocument);
         IsProcessing = true;
         try
         {
             var frame = await processingService.EnqueueAsync(currentDocument, snapshot, quality);
             if (frame is null) return;
-            if (!ReferenceEquals(currentDocument, document)) return;
+            if (isRoiRequest
+                    ? !ReferenceEquals(currentDocument, roiDocument)
+                    : !ReferenceEquals(currentDocument, document))
+                return;
             if (frame.DocumentContext != currentDocument.ContextId || frame.SourceIdentity != currentDocument.SourceIdentity) return;
             if (frame.RequestSequence != latestProgressRequestId || snapshot.Revision != history.Current.Revision) return;
             if (frame.RequestSequence < latestDisplayedRequestSequence) return;
             latestDisplayedRequestSequence = frame.RequestSequence;
-            authoritativeProcessedPixels = frame.BgraPixels;
-            authoritativeSnapshot = snapshot;
             var displayPixels = frame.BgraPixels;
-            if (!Equals(snapshot, history.Current) && FastInteractivePreview.TryRender(
+            authoritativeProcessedPixels = displayPixels;
+            authoritativeSnapshot = snapshot;
+            if (!isRoiRequest && !Equals(snapshot, history.Current) && FastInteractivePreview.TryRender(
                     frame.BgraPixels,
                     ImageWidth,
                     ImageHeight,
@@ -1963,7 +2359,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 displayPixels = latestPreview;
                 DiagnosticService.Current.RecordFastPreviewTiming(elapsed, history.Current.Revision, ImageWidth, ImageHeight);
             }
-            var bitmap = CreateBitmap(displayPixels, ImageWidth, ImageHeight);
+            var displayMetadata = currentDocument.Source.Metadata;
+            var bitmap = CreateBitmap(displayPixels, displayMetadata.Width, displayMetadata.Height);
             ProcessedBitmap?.Dispose();
             ProcessedPixels = displayPixels;
             ProcessedBitmap = bitmap;
@@ -2103,6 +2500,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        Interlocked.Increment(ref roiGeneration);
         authoritativeIdleTimer.Stop();
         authoritativeIdleTimer.Tick -= OnAuthoritativeIdle;
         interactivePreviewTimer.Stop();
@@ -2116,7 +2514,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         exportCancellation?.Dispose();
         processingService.ProgressChanged -= OnProcessingProgressChanged;
         processingService.Dispose();
-        document?.Dispose();
+        var regionToDispose = roiDocument;
+        var documentToDispose = document;
+        roiDocument = null;
+        document = null;
+        if (roiActivationTask.IsCompleted)
+        {
+            regionToDispose?.Dispose();
+            documentToDispose?.Dispose();
+        }
+        else
+        {
+            _ = roiActivationTask.ContinueWith(
+                _ =>
+                {
+                    regionToDispose?.Dispose();
+                    documentToDispose?.Dispose();
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
         OriginalBitmap?.Dispose();
         ProcessedBitmap?.Dispose();
     }

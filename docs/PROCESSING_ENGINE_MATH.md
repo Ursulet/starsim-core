@@ -33,12 +33,14 @@ Both reconstruct as `Low6 + globalStrength·Σ(gaini·processed(Wi))`. Gain 1 is
 ## Sharpening and local detail
 
 - Unsharp: `B=Gaussian(Input,σ)`, `D=sign(Input-B)·max(|Input-B|-T,0)`, `Output=Input+Amount·D`.
-- Multi-scale: `B1=Gaussian(Input,σfine)`, `B2=Gaussian(B1,σbroad)`, `D1=Input-B1`, `D2=B1-B2`, `Output=Input+Afine·soft(D1,T)+Abroad·soft(D2,T)`.
-- Local Detail: independent local and micro Gaussian differences are added with their own amounts. The existing edge-protection gate reduces amplification at strong local transitions.
+- Multi-scale: `Bfine=Gaussian(Input,σfine)`, `Bbroad=Gaussian(Input,max(σbroad,σfine+0.15))`, `Dfine=Input-Bfine`, `Dbroad=Bfine-Bbroad`, `Output=Input+Afine·soft(Dfine,T)+Abroad·soft(Dbroad,T)`. Broad Radius is therefore an absolute target scale, not a second blur accumulated on Fine Radius. The minimum separation keeps the two bands ordered when an old or custom preset supplies `σbroad≤σfine`.
+- Local Detail: independent local and micro Gaussian differences are added with their own amounts. The edge-protection gate uses the larger absolute response of both bands: `gate=1/(1+EdgeProtection·max(|Dlocal|,|Dmicro|)·20)`. This protects fine high-contrast edges as well as broader transitions.
+
+Amount zero is an exact and allocation-free identity for Unsharp, Multi-scale Sharpen and Local Detail. A module can therefore be enabled while remaining visually neutral until an Amount control is raised.
 
 ## Noise reduction
 
-Noise Reduction performs a three-band recursive Gaussian decomposition. Noise sigma is estimated from the finest signed detail by `median(abs(W1-median(W1)))/0.67448975`. Each band uses soft shrinkage with `T=Strength·ThresholdScale·sigmaNoise`. Fine Detail Protection continuously reduces shrinkage for coefficients well above the estimated noise. RGB is separated into Rec.709 luminance and three signed `channel-luminance` components; luminance and chrominance strengths are independent. A zero strength is exact identity.
+Noise Reduction performs a three-band recursive Gaussian decomposition. Noise sigma is estimated from the finest signed detail by `median(abs(W1-median(W1)))/0.67448975`. Each band uses soft shrinkage with `T=Strength·ThresholdScale·sigmaNoise`. Fine Detail Protection continuously reduces shrinkage for coefficients well above the estimated noise. RGB is separated into Rec.709 luminance and three signed `channel-luminance` components; luminance and chrominance strengths are independent. After nonlinear chroma shrinkage, the residual Rec.709 luminance component is removed from the three chroma planes before RGB reconstruction. Chrominance reduction can therefore no longer change the luminance owned by the Luminance control. Both strengths at zero are exact identity.
 
 ## Richardson–Lucy and Deringing
 
@@ -48,7 +50,7 @@ Richardson–Lucy uses a normalized symmetric Gaussian PSF and `epsilon=1e-6`:
 
 The final output is `Input+Strength·(RL-Input)`. Damping 1 suppresses all updates; Strength 0 is exact identity. Deringing is not embedded in RL.
 
-Deringing currently uses the documented self-reference fallback: local min/max are measured from neighboring samples of its own input, `extension=EdgeProtection·(max-min)`, `corrected=clamp(P,min-extension,max+extension)`, and `Output=lerp(P,corrected,Strength)`. It has no hidden access to an upstream buffer.
+Deringing uses a self-reference local envelope. For RGB, the envelope is measured once from Rec.709 luminance and the resulting additive correction is applied equally to R, G and B; chroma differences are preserved and independent channel decisions cannot create colored halos. Local min/max are measured from neighboring samples, `extension=EdgeProtection·(max-min)`, `corrected=clamp(P,min-extension,max+extension)`, and `Output=lerp(P,corrected,Strength)`. Fractional Radius values interpolate the corrected envelopes at `floor(Radius)` and `ceil(Radius)`, so the control no longer changes only at integer steps. It has no hidden access to an upstream buffer and cannot distinguish every broad halo from legitimate structure; it remains a corrective stage, not a sharpening method.
 
 ## RGB alignment
 
@@ -58,7 +60,7 @@ Green is the reference. Automatic Red/Blue translations use zero-padded 2-D FFT 
 
 RGB Balance multiplies each channel independently. Saturation scales channel distance from Rec.709 luminance. Advanced Color owns only white gains, temperature, tint, and adaptive vibrance.
 
-Exposure is `x·2^EV`; Contrast is `0.5+factor·(x-0.5)`; Gamma is signed: `sign(x)·|x|^(1/gamma)`. Advanced Tone owns brightness, black/white normalization, highlights, and shadows. These controls never write each other's state.
+Exposure is `x·2^EV`; Contrast is `0.5+factor·(x-0.5)`; Gamma is signed: `sign(x)·|x|^(1/gamma)`. Advanced Tone owns brightness, black/white normalization, highlights, and shadows. Shadow/highlight weights are computed from `clamp(normalized,0,1)`, preventing quadratic growth for valid float pipeline samples outside the display range while leaving the float output itself unclipped. These controls never write each other's state.
 
 ## Numerical invariants
 

@@ -1,21 +1,27 @@
 using StarSimCore.Application.Imaging;
+using StarSimCore.Application.Performance;
 using StarSimCore.Application.Processing;
 using StarSimCore.Interop;
 
 namespace StarSimCore.Application.Export;
 
-public sealed class ExportService
+public sealed class ExportService : IDisposable
 {
     private readonly PipelineEngine engine;
+    private readonly ResourceGovernor governor;
+    private bool disposed;
 
-    public ExportService(IReadOnlyList<IImageProcessor>? processorDefinitions = null)
-        : this(new PipelineEngine(processorDefinitions: processorDefinitions))
+    public ExportService(
+        IReadOnlyList<IImageProcessor>? processorDefinitions = null,
+        ResourceGovernor? governor = null)
+        : this(new PipelineEngine(processorDefinitions: processorDefinitions), governor)
     {
     }
 
-    internal ExportService(PipelineEngine engine)
+    internal ExportService(PipelineEngine engine, ResourceGovernor? governor = null)
     {
         this.engine = engine;
+        this.governor = governor ?? ResourceGovernor.Shared;
     }
 
     public static string GetDefaultExportPath(string sourcePath, ExportFormat format)
@@ -44,6 +50,7 @@ public sealed class ExportService
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.DestinationPath);
+        ObjectDisposedException.ThrowIf(disposed, this);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -59,6 +66,12 @@ public sealed class ExportService
         return Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var admission = governor.Admit(
+                document.Source.Metadata,
+                snapshot,
+                ProcessingQuality.FullResolution,
+                requestedScale: 1);
+            using var resources = governor.Acquire(admission, cancellationToken);
 
             progress?.Report(new ExportProgress("Preparing full-resolution pipeline...", 0.0, 0, 100));
 
@@ -120,5 +133,12 @@ public sealed class ExportService
                 processedImage?.Dispose();
             }
         }, cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        engine.Dispose();
     }
 }

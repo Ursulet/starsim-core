@@ -19,6 +19,14 @@ public static class BeginnerMacroMapper
 {
     private static readonly double[] NeutralWaveletGains = [1, 1, 1, 1, 1, 1];
 
+    // Beginner profiles need useful detail headroom without flattening their
+    // target-specific L1-L6 shape. At the recipe's nominal Detail value, L1 is
+    // raised by exactly ten gain points and every other layer's contribution
+    // above neutral (gain 1) is scaled by the same factor. This makes a profile
+    // L1 value of 47 resolve to 57 while a broad gain of 2 remains close to 2,
+    // rather than being incorrectly raised to 12.
+    private const double BeginnerFineDetailBoostPoints = 10.0;
+
     public static PipelineSnapshot Map(
         PresetRecipe recipe,
         BeginnerMacroValues requestedMacros,
@@ -196,13 +204,20 @@ public static class BeginnerMacroMapper
         var referenceDetail = Math.Max(1.0, recipe.Macros.Detail - 50.0);
         var detailIntensity = Math.Clamp((macros.Detail - 50.0) / referenceDetail, 0.0, 2.0);
         var attenuation = Math.Clamp(macros.Detail / 50.0, 0.0, 1.0);
+        var fineContribution = Math.Max(0.0, profile[0] - 1.0);
+        var contributionBoost = fineContribution > 1e-9
+            ? (fineContribution + BeginnerFineDetailBoostPoints) / fineContribution
+            : 1.0;
 
         for (var layer = 0; layer < WaveletMacroMapper.LayerCount; layer++)
         {
             var offset = WaveletMacroMapper.GetScaleParamOffset(layer);
             parameters[offset] = macros.Detail < 50
                 ? attenuation
-                : Math.Clamp(1.0 + (profile[layer] - 1.0) * detailIntensity, 0.0, 100.0);
+                : Math.Clamp(
+                    1.0 + (profile[layer] - 1.0) * contributionBoost * detailIntensity,
+                    0.0,
+                    100.0);
         }
     }
 

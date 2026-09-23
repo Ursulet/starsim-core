@@ -28,6 +28,20 @@ public sealed class HelpModuleGuideViewModel : ObservableObject
     public string Usage => LocalizationService.Instance[UsageKey];
 }
 
+public sealed class HelpShortcutViewModel : ObservableObject
+{
+    public HelpShortcutViewModel(string gesture, string resourceKey)
+    {
+        Gesture = gesture;
+        ResourceKey = resourceKey;
+        LocalizationService.Instance.LanguageChanged += (_, _) => OnPropertyChanged(nameof(Action));
+    }
+
+    public string Gesture { get; }
+    public string ResourceKey { get; }
+    public string Action => LocalizationService.Instance[ResourceKey];
+}
+
 public sealed partial class HelpWindowViewModel : ObservableObject
 {
     public HelpWindowViewModel(int selectedTabIndex = 0)
@@ -48,6 +62,29 @@ public sealed partial class HelpWindowViewModel : ObservableObject
 
     [ObservableProperty] private int selectedTabIndex;
     [ObservableProperty] private string versionText = string.Empty;
+
+    public IReadOnlyList<HelpShortcutViewModel> Shortcuts { get; } =
+    [
+        new("Ctrl+O", "Help.Shortcut.OpenImage"),
+        new("Ctrl+P", "Help.Shortcut.OpenProject"),
+        new("Ctrl+S", "Help.Shortcut.SaveProject"),
+        new("Ctrl+E", "Help.Shortcut.Export"),
+        new("Ctrl+Z", "Help.Shortcut.Undo"),
+        new("Ctrl+Y / Ctrl+Shift+Z", "Help.Shortcut.Redo"),
+        new("Ctrl+B", "Help.Shortcut.Compare"),
+        new("Ctrl+Shift+B", "Help.Shortcut.Batch"),
+        new("Ctrl+H", "Help.Shortcut.History"),
+        new("Ctrl+Shift+C", "Help.Shortcut.Clipping"),
+        new("Ctrl+R", "Help.Shortcut.Roi"),
+        new("Ctrl+Enter", "Help.Shortcut.ApplyRoi"),
+        new("Ctrl+0", "Help.Shortcut.Fit"),
+        new("Ctrl++ / Ctrl+-", "Help.Shortcut.Zoom"),
+        new("F1 / F2", "Help.Shortcut.Mode"),
+        new("Ctrl+F1", "Help.Shortcut.Help"),
+        new("F11", "Help.Shortcut.Maximize"),
+        new("Esc", "Help.Shortcut.Escape"),
+        new("Alt+F4", "Help.Shortcut.Close"),
+    ];
 
     public IReadOnlyList<HelpModuleGuideViewModel> Modules { get; } =
     [

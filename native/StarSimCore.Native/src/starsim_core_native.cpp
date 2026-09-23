@@ -2034,16 +2034,23 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                 const float amount = parameters->values[0];
                 const float radius = parameters->values[1];
                 const float threshold = parameters->values[2];
+                if (amount <= 1e-8f) break;
                 for (uint32_t channel_index = 0; channel_index < channels; ++channel_index)
                 {
                     auto source = read_channel(channel_index);
                     std::vector<float> blurred;
                     if (!gaussian_blur(source, width, height, radius, blurred, cancellation_flag))
                         return fail(SSC_STATUS_CANCELLED, "Unsharp mask was cancelled.");
-                    for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                    for (uint32_t y = 0; y < height; ++y)
                     {
-                        const float detail = soft_threshold(source[pixel] - blurred[pixel], threshold);
-                        source[pixel] += amount * detail;
+                        if (is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Unsharp mask was cancelled.");
+                        for (uint32_t x = 0; x < width; ++x)
+                        {
+                            const size_t pixel = static_cast<size_t>(y) * width + x;
+                            const float detail = soft_threshold(source[pixel] - blurred[pixel], threshold);
+                            source[pixel] += amount * detail;
+                        }
                     }
                     write_channel(channel_index, source);
                 }
@@ -2057,19 +2064,31 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                 const float broad_amount = legacy ? parameters->values[0] * 0.35f : parameters->values[2];
                 const float broad_radius = legacy ? parameters->values[2] : parameters->values[3];
                 const float threshold = legacy ? parameters->values[3] : parameters->values[4];
+                if (fine_amount <= 1e-8f && broad_amount <= 1e-8f) break;
+
+                // Broad Radius is an absolute target scale, not an additional blur applied
+                // on top of Fine Radius. Keep the two bands ordered even for old/custom
+                // presets that specify a broad radius below the fine radius.
+                const float effective_broad_radius = std::max(broad_radius, fine_radius + 0.15f);
                 for (uint32_t channel_index = 0; channel_index < channels; ++channel_index)
                 {
                     auto source = read_channel(channel_index);
                     std::vector<float> fine;
                     std::vector<float> broad;
                     if (!gaussian_blur(source, width, height, fine_radius, fine, cancellation_flag) ||
-                        !gaussian_blur(fine, width, height, broad_radius, broad, cancellation_flag))
+                        !gaussian_blur(source, width, height, effective_broad_radius, broad, cancellation_flag))
                         return fail(SSC_STATUS_CANCELLED, "Multi-scale sharpen was cancelled.");
-                    for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                    for (uint32_t y = 0; y < height; ++y)
                     {
-                        const float fine_detail = soft_threshold(source[pixel] - fine[pixel], threshold);
-                        const float broad_detail = soft_threshold(fine[pixel] - broad[pixel], threshold);
-                        source[pixel] += fine_amount * fine_detail + broad_amount * broad_detail;
+                        if (is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Multi-scale sharpen was cancelled.");
+                        for (uint32_t x = 0; x < width; ++x)
+                        {
+                            const size_t pixel = static_cast<size_t>(y) * width + x;
+                            const float fine_detail = soft_threshold(source[pixel] - fine[pixel], threshold);
+                            const float broad_detail = soft_threshold(fine[pixel] - broad[pixel], threshold);
+                            source[pixel] += fine_amount * fine_detail + broad_amount * broad_detail;
+                        }
                     }
                     write_channel(channel_index, source);
                 }
@@ -2081,6 +2100,7 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                 const float chrominance_strength = parameters->values[1];
                 const float detail_protection = parameters->values[2];
                 const float threshold_scale = parameters->values[3];
+                if (luminance_strength <= 1e-8f && chrominance_strength <= 1e-8f) break;
                 std::vector<std::vector<float>> source_channels;
                 for (uint32_t channel_index = 0; channel_index < channels; ++channel_index)
                     source_channels.push_back(read_channel(channel_index));
@@ -2099,12 +2119,18 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                 {
                     std::vector<float> luminance(pixel_count);
                     std::vector<std::vector<float>> chroma(3, std::vector<float>(pixel_count));
-                    for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                    for (uint32_t y = 0; y < height; ++y)
                     {
-                        luminance[pixel] = 0.2126f * source_channels[0][pixel] +
-                            0.7152f * source_channels[1][pixel] + 0.0722f * source_channels[2][pixel];
-                        for (uint32_t channel_index = 0; channel_index < 3; ++channel_index)
-                            chroma[channel_index][pixel] = source_channels[channel_index][pixel] - luminance[pixel];
+                        if (is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Noise reduction was cancelled.");
+                        for (uint32_t x = 0; x < width; ++x)
+                        {
+                            const size_t pixel = static_cast<size_t>(y) * width + x;
+                            luminance[pixel] = 0.2126f * source_channels[0][pixel] +
+                                0.7152f * source_channels[1][pixel] + 0.0722f * source_channels[2][pixel];
+                            for (uint32_t channel_index = 0; channel_index < 3; ++channel_index)
+                                chroma[channel_index][pixel] = source_channels[channel_index][pixel] - luminance[pixel];
+                        }
                     }
                     std::vector<float> denoised_luminance;
                     if (!wavelet_shrink_channel(
@@ -2112,17 +2138,35 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                             luminance_strength, detail_protection, threshold_scale,
                             denoised_luminance, cancellation_flag))
                         return fail(SSC_STATUS_CANCELLED, "Luminance noise reduction was cancelled.");
+                    std::vector<std::vector<float>> denoised_chroma(3);
                     for (uint32_t channel_index = 0; channel_index < 3; ++channel_index)
                     {
-                        std::vector<float> denoised_chroma;
                         if (!wavelet_shrink_channel(
                                 chroma[channel_index], width, height,
                                 chrominance_strength, detail_protection, threshold_scale,
-                                denoised_chroma, cancellation_flag))
+                                denoised_chroma[channel_index], cancellation_flag))
                             return fail(SSC_STATUS_CANCELLED, "Chrominance noise reduction was cancelled.");
-                        for (size_t pixel = 0; pixel < pixel_count; ++pixel)
-                            storage->planar_pixels[static_cast<size_t>(channel_index) * pixel_count + pixel] =
-                                denoised_luminance[pixel] + denoised_chroma[pixel];
+                    }
+
+                    // Independent nonlinear shrinkage can leave a small luminance
+                    // component in the three chroma planes. Remove it before RGB
+                    // reconstruction so the luminance slider remains the sole owner
+                    // of brightness-noise reduction.
+                    for (uint32_t y = 0; y < height; ++y)
+                    {
+                        if (is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Noise reduction was cancelled.");
+                        for (uint32_t x = 0; x < width; ++x)
+                        {
+                            const size_t pixel = static_cast<size_t>(y) * width + x;
+                            const float chroma_luminance =
+                                0.2126f * denoised_chroma[0][pixel] +
+                                0.7152f * denoised_chroma[1][pixel] +
+                                0.0722f * denoised_chroma[2][pixel];
+                            for (uint32_t channel_index = 0; channel_index < 3; ++channel_index)
+                                storage->planar_pixels[static_cast<size_t>(channel_index) * pixel_count + pixel] =
+                                    denoised_luminance[pixel] + denoised_chroma[channel_index][pixel] - chroma_luminance;
+                        }
                     }
                 }
                 break;
@@ -2130,42 +2174,109 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
             case SSC_PROCESSOR_DERINGING:
             {
                 const float strength = parameters->values[0];
-                const int radius = std::clamp(static_cast<int>(std::lround(parameters->values[1])), 1, 8);
+                const float radius = std::clamp(parameters->values[1], 1.0f, 8.0f);
                 const float edge_protection = parameters->values[2];
+                if (strength <= 1e-8f) break;
+
+                std::vector<std::vector<float>> source_channels;
+                source_channels.reserve(channels);
                 for (uint32_t channel_index = 0; channel_index < channels; ++channel_index)
+                    source_channels.push_back(read_channel(channel_index));
+
+                std::vector<float> guide(pixel_count);
+                if (channels == 3)
                 {
-                    auto source = read_channel(channel_index);
-                    auto result = source;
-                    for (uint32_t y = 0; y < height; ++y)
+                    for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                    {
+                        if ((pixel & 0xffffU) == 0 && is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Deringing was cancelled.");
+                        guide[pixel] = 0.2126f * source_channels[0][pixel] +
+                            0.7152f * source_channels[1][pixel] + 0.0722f * source_channels[2][pixel];
+                    }
+                }
+                else
+                {
+                    guide = source_channels[0];
+                }
+
+                auto corrected_guide = guide;
+                const int lower_radius = std::clamp(static_cast<int>(std::floor(radius)), 1, 8);
+                const int upper_radius = std::clamp(static_cast<int>(std::ceil(radius)), 1, 8);
+                const float radius_fraction = radius - static_cast<float>(lower_radius);
+                const int lower_radius_squared = lower_radius * lower_radius;
+                const int upper_radius_squared = upper_radius * upper_radius;
+
+                for (uint32_t y = 0; y < height; ++y)
+                {
+                    if (is_cancelled(cancellation_flag))
+                        return fail(SSC_STATUS_CANCELLED, "Deringing was cancelled.");
                     for (uint32_t x = 0; x < width; ++x)
                     {
-                        float minimum = std::numeric_limits<float>::infinity();
-                        float maximum = -std::numeric_limits<float>::infinity();
-                        for (int offset_y = -radius; offset_y <= radius; ++offset_y)
-                        for (int offset_x = -radius; offset_x <= radius; ++offset_x)
+                        float lower_minimum = std::numeric_limits<float>::infinity();
+                        float lower_maximum = -std::numeric_limits<float>::infinity();
+                        float upper_minimum = std::numeric_limits<float>::infinity();
+                        float upper_maximum = -std::numeric_limits<float>::infinity();
+                        for (int offset_y = -upper_radius; offset_y <= upper_radius; ++offset_y)
+                        for (int offset_x = -upper_radius; offset_x <= upper_radius; ++offset_x)
                         {
                             if (offset_x == 0 && offset_y == 0) continue;
-                            if (offset_x * offset_x + offset_y * offset_y > radius * radius) continue;
+                            const int distance_squared = offset_x * offset_x + offset_y * offset_y;
+                            if (distance_squared > upper_radius_squared) continue;
                             const int sample_x = reflected_index(static_cast<int>(x) + offset_x, static_cast<int>(width));
                             const int sample_y = reflected_index(static_cast<int>(y) + offset_y, static_cast<int>(height));
                             if (sample_x == static_cast<int>(x) && sample_y == static_cast<int>(y)) continue;
-                            const float value = source[static_cast<size_t>(sample_y) * width + sample_x];
-                            minimum = std::min(minimum, value);
-                            maximum = std::max(maximum, value);
+                            const float value = guide[static_cast<size_t>(sample_y) * width + sample_x];
+                            upper_minimum = std::min(upper_minimum, value);
+                            upper_maximum = std::max(upper_maximum, value);
+                            if (distance_squared <= lower_radius_squared)
+                            {
+                                lower_minimum = std::min(lower_minimum, value);
+                                lower_maximum = std::max(lower_maximum, value);
+                            }
                         }
                         const size_t pixel = static_cast<size_t>(y) * width + x;
-                        if (!std::isfinite(minimum) || !std::isfinite(maximum))
+                        if (!std::isfinite(lower_minimum) || !std::isfinite(lower_maximum) ||
+                            !std::isfinite(upper_minimum) || !std::isfinite(upper_maximum))
                         {
-                            result[pixel] = source[pixel];
+                            corrected_guide[pixel] = guide[pixel];
                             continue;
                         }
-                        const float edge = maximum - minimum;
-                        const float extension = edge_protection * edge;
-                        const float corrected = std::clamp(
-                            source[pixel], minimum - extension, maximum + extension);
-                        result[pixel] = source[pixel] + (corrected - source[pixel]) * strength;
+
+                        const float lower_edge = lower_maximum - lower_minimum;
+                        const float upper_edge = upper_maximum - upper_minimum;
+                        const float lower_extension = edge_protection * lower_edge;
+                        const float upper_extension = edge_protection * upper_edge;
+                        const float lower_corrected = std::clamp(
+                            guide[pixel], lower_minimum - lower_extension, lower_maximum + lower_extension);
+                        const float upper_corrected = std::clamp(
+                            guide[pixel], upper_minimum - upper_extension, upper_maximum + upper_extension);
+                        const float envelope_corrected =
+                            lower_corrected + (upper_corrected - lower_corrected) * radius_fraction;
+                        corrected_guide[pixel] =
+                            guide[pixel] + (envelope_corrected - guide[pixel]) * strength;
                     }
-                    write_channel(channel_index, result);
+                }
+
+                if (channels == 3)
+                {
+                    // Apply one luminance-derived correction to all channels. This
+                    // preserves the original chroma differences and avoids colored
+                    // halos caused by independent per-channel extrema decisions.
+                    for (uint32_t channel_index = 0; channel_index < 3; ++channel_index)
+                    {
+                        auto result = source_channels[channel_index];
+                        for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                        {
+                            if ((pixel & 0xffffU) == 0 && is_cancelled(cancellation_flag))
+                                return fail(SSC_STATUS_CANCELLED, "Deringing was cancelled.");
+                            result[pixel] += corrected_guide[pixel] - guide[pixel];
+                        }
+                        write_channel(channel_index, result);
+                    }
+                }
+                else
+                {
+                    write_channel(0, corrected_guide);
                 }
                 break;
             }
@@ -2192,12 +2303,18 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                             return fail(SSC_STATUS_CANCELLED, "Richardson-Lucy was cancelled.");
                         std::vector<float> ratio(pixel_count);
                         for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                        {
+                            if ((pixel & 0xffffU) == 0 && is_cancelled(cancellation_flag))
+                                return fail(SSC_STATUS_CANCELLED, "Richardson-Lucy was cancelled.");
                             ratio[pixel] = std::max(0.0f, source[pixel]) / (blurred[pixel] + epsilon);
+                        }
                         std::vector<float> correction;
                         if (!gaussian_blur(ratio, width, height, radius, correction, cancellation_flag))
                             return fail(SSC_STATUS_CANCELLED, "Richardson-Lucy was cancelled.");
                         for (size_t pixel = 0; pixel < pixel_count; ++pixel)
                         {
+                            if ((pixel & 0xffffU) == 0 && is_cancelled(cancellation_flag))
+                                return fail(SSC_STATUS_CANCELLED, "Richardson-Lucy was cancelled.");
                             const float candidate = std::max(0.0f, estimate[pixel] * correction[pixel]);
                             estimate[pixel] += (candidate - estimate[pixel]) * (1.0f - damping);
                         }
@@ -2240,11 +2357,15 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                     {
                         std::vector<float> aligned(pixel_count);
                         for (uint32_t y = 0; y < height; ++y)
-                        for (uint32_t x = 0; x < width; ++x)
-                            aligned[static_cast<size_t>(y) * width + x] = lanczos3_sample(
-                                source_channels[channel_index], width, height,
-                                static_cast<float>(x) + shifts_x[channel_index],
-                                static_cast<float>(y) + shifts_y[channel_index]);
+                        {
+                            if (is_cancelled(cancellation_flag))
+                                return fail(SSC_STATUS_CANCELLED, "RGB alignment was cancelled.");
+                            for (uint32_t x = 0; x < width; ++x)
+                                aligned[static_cast<size_t>(y) * width + x] = lanczos3_sample(
+                                    source_channels[channel_index], width, height,
+                                    static_cast<float>(x) + shifts_x[channel_index],
+                                    static_cast<float>(y) + shifts_y[channel_index]);
+                        }
                         write_channel(channel_index, aligned);
                     }
                 }
@@ -2263,6 +2384,8 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                     const float vibrance = parameters->values[5];
                     for (size_t pixel = 0; pixel < pixel_count; ++pixel)
                     {
+                        if ((pixel & 0xffffU) == 0 && is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Advanced color was cancelled.");
                         float red = storage->planar_pixels[pixel] * gains[0];
                         float green = storage->planar_pixels[pixel_count + pixel] * gains[1];
                         float blue = storage->planar_pixels[2 * pixel_count + pixel] * gains[2];
@@ -2286,11 +2409,15 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                 const float highlights = parameters->values[3];
                 const float shadows = parameters->values[4];
                 if (white <= black + 1e-6f) return fail(SSC_STATUS_INVALID_ARGUMENT, "White point must exceed black point.");
-                for (float& value : storage->planar_pixels)
+                for (size_t index = 0; index < storage->planar_pixels.size(); ++index)
                 {
+                    if ((index & 0xffffU) == 0 && is_cancelled(cancellation_flag))
+                        return fail(SSC_STATUS_CANCELLED, "Advanced tone was cancelled.");
+                    float& value = storage->planar_pixels[index];
                     float normalized = (value - black) / (white - black) + brightness;
-                    const float shadow_weight = (1.0f - normalized) * (1.0f - normalized);
-                    const float highlight_weight = normalized * normalized;
+                    const float bounded_position = std::clamp(normalized, 0.0f, 1.0f);
+                    const float shadow_weight = (1.0f - bounded_position) * (1.0f - bounded_position);
+                    const float highlight_weight = bounded_position * bounded_position;
                     normalized += shadows * shadow_weight * 0.25f + highlights * highlight_weight * 0.25f;
                     value = normalized;
                 }
@@ -2303,6 +2430,7 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                 const float micro_amount = parameters->values[2];
                 const float micro_radius = parameters->values[3];
                 const float edge_protection = parameters->values[4];
+                if (local_amount <= 1e-8f && micro_amount <= 1e-8f) break;
                 for (uint32_t channel_index = 0; channel_index < channels; ++channel_index)
                 {
                     auto source = read_channel(channel_index);
@@ -2311,12 +2439,19 @@ extern "C" SSC_Status ssc_image_process_expert_with_progress(
                     if (!gaussian_blur(source, width, height, local_radius, local_blur, cancellation_flag) ||
                         !gaussian_blur(source, width, height, micro_radius, micro_blur, cancellation_flag))
                         return fail(SSC_STATUS_CANCELLED, "Local detail was cancelled.");
-                    for (size_t pixel = 0; pixel < pixel_count; ++pixel)
+                    for (uint32_t y = 0; y < height; ++y)
                     {
-                        const float local_detail = source[pixel] - local_blur[pixel];
-                        const float micro_detail = source[pixel] - micro_blur[pixel];
-                        const float gate = 1.0f / (1.0f + edge_protection * std::abs(local_detail) * 20.0f);
-                        source[pixel] += gate * (local_amount * local_detail + micro_amount * micro_detail);
+                        if (is_cancelled(cancellation_flag))
+                            return fail(SSC_STATUS_CANCELLED, "Local detail was cancelled.");
+                        for (uint32_t x = 0; x < width; ++x)
+                        {
+                            const size_t pixel = static_cast<size_t>(y) * width + x;
+                            const float local_detail = source[pixel] - local_blur[pixel];
+                            const float micro_detail = source[pixel] - micro_blur[pixel];
+                            const float protected_edge = std::max(std::abs(local_detail), std::abs(micro_detail));
+                            const float gate = 1.0f / (1.0f + edge_protection * protected_edge * 20.0f);
+                            source[pixel] += gate * (local_amount * local_detail + micro_amount * micro_detail);
+                        }
                     }
                     write_channel(channel_index, source);
                 }

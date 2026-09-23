@@ -4,10 +4,10 @@
 #define MyAppExeName "StarSimCore.App.exe"
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.9.0-beta.1"
+  #define MyAppVersion "1.0.0"
 #endif
 #ifndef MyAppNumericVersion
-  #define MyAppNumericVersion "0.9.0.0"
+  #define MyAppNumericVersion "1.0.0.0"
 #endif
 #ifndef MyPayloadDir
   #define MyPayloadDir "..\artifacts\publish\win-x64\StarSimCore"

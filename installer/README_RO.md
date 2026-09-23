@@ -22,8 +22,9 @@ Scriptul nu rulează testele. El compilează Release, publică versiunea autonom
 Rezultatele apar aici:
 
 ```text
-artifacts\installer\StarSimCore-Setup-0.9.0-beta.1-win-x64.exe
-artifacts\package\StarSimCore-0.9.0-beta.1-win-x64-portable.zip
+artifacts\installer\StarSimCore-Setup-1.0.0-win-x64.exe
+artifacts\package\StarSimCore-1.0.0-win-x64-portable.zip
+artifacts\installer\StarSimCore-Setup-1.0.0-win-x64-README.md
 artifacts\installer\SHA256SUMS.txt
 ```
 
@@ -41,10 +42,10 @@ artifacts\installer\SHA256SUMS.txt
 
 ## Versiune nouă
 
-Pentru exemplul `0.9.1`:
+Pentru exemplul `1.0.1`:
 
 ```powershell
-.\scripts\make-installer.ps1 -Version '0.9.1' -NumericVersion '0.9.1.0'
+.\scripts\make-installer.ps1 -Version '1.0.1' -NumericVersion '1.0.1.0'
 ```
 
 `Version` este textul public afișat utilizatorilor. `NumericVersion` trebuie să conțină exact patru numere și este folosit de Windows în proprietățile fișierului.

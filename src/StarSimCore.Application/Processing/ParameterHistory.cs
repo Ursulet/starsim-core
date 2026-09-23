@@ -11,6 +11,7 @@ public sealed class ParameterHistory
     private readonly Stack<HistoryEntry> redo = new();
     private bool isCoalescing;
     private string? currentCoalesceKey;
+    private DateTimeOffset currentTimestamp;
 
     public ParameterHistory(
         PipelineSnapshot initial,
@@ -20,6 +21,7 @@ public sealed class ParameterHistory
         this.processorDefinitions = processorDefinitions ?? BuiltInProcessors.All;
         Current = initial;
         CurrentDescription = initialDescription;
+        currentTimestamp = DateTimeOffset.UtcNow;
     }
 
     public PipelineSnapshot Current { get; private set; }
@@ -28,6 +30,23 @@ public sealed class ParameterHistory
     public bool CanRedo => redo.Count > 0;
     public int UndoCount => undo.Count;
     public int RedoCount => redo.Count;
+    public int CurrentTimelineIndex => undo.Count;
+
+    /// <summary>
+    /// Returns the complete reachable history in chronological order. Reading this
+    /// collection never mutates the current snapshot or the undo/redo stacks.
+    /// </summary>
+    public IReadOnlyList<HistoryEntry> Timeline
+    {
+        get
+        {
+            var entries = new List<HistoryEntry>(undo.Count + redo.Count + 1);
+            entries.AddRange(undo.Reverse());
+            entries.Add(new HistoryEntry(Current, CurrentDescription, currentTimestamp));
+            entries.AddRange(redo);
+            return entries;
+        }
+    }
 
     public void Apply(
         PipelineSnapshot next,
@@ -41,12 +60,14 @@ public sealed class ParameterHistory
         {
             Current = next;
             CurrentDescription = description;
+            currentTimestamp = DateTimeOffset.UtcNow;
             return;
         }
 
-        undo.Push(new HistoryEntry(Current, CurrentDescription, DateTimeOffset.UtcNow));
+        undo.Push(new HistoryEntry(Current, CurrentDescription, currentTimestamp));
         Current = next;
         CurrentDescription = description;
+        currentTimestamp = DateTimeOffset.UtcNow;
         isCoalescing = coalesce;
         currentCoalesceKey = coalesce ? coalesceKey : null;
         redo.Clear();
@@ -66,9 +87,10 @@ public sealed class ParameterHistory
     {
         EndCoalescing();
         if (!undo.TryPop(out var previous)) return false;
-        redo.Push(new HistoryEntry(Current, CurrentDescription, DateTimeOffset.UtcNow));
+        redo.Push(new HistoryEntry(Current, CurrentDescription, currentTimestamp));
         Current = previous.Snapshot;
         CurrentDescription = previous.Description;
+        currentTimestamp = previous.Timestamp;
         return true;
     }
 
@@ -76,10 +98,29 @@ public sealed class ParameterHistory
     {
         EndCoalescing();
         if (!redo.TryPop(out var next)) return false;
-        undo.Push(new HistoryEntry(Current, CurrentDescription, DateTimeOffset.UtcNow));
+        undo.Push(new HistoryEntry(Current, CurrentDescription, currentTimestamp));
         Current = next.Snapshot;
         CurrentDescription = next.Description;
+        currentTimestamp = next.Timestamp;
         return true;
+    }
+
+    /// <summary>
+    /// Moves to any state currently visible in <see cref="Timeline"/> while
+    /// preserving ordinary Undo/Redo behavior around the selected state.
+    /// </summary>
+    public bool JumpToTimelineIndex(int index)
+    {
+        EndCoalescing();
+        var count = undo.Count + redo.Count + 1;
+        if ((uint)index >= (uint)count) return false;
+
+        var changed = false;
+        while (undo.Count > index)
+            changed |= Undo();
+        while (undo.Count < index)
+            changed |= Redo();
+        return changed;
     }
 
     public void ResetAll()
@@ -143,6 +184,7 @@ public sealed class ParameterHistory
         redo.Clear();
         Current = snapshot;
         CurrentDescription = description;
+        currentTimestamp = DateTimeOffset.UtcNow;
     }
 
     public static bool ModulesEqual(PipelineSnapshot? a, PipelineSnapshot? b)

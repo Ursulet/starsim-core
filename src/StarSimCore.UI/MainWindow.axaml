@@ -8,6 +8,9 @@
         Title="{loc:Localize Key=App.Title}"
         Icon="avares://StarSimCore.UI/Assets/starsim-core-icon.png"
         Width="1536" Height="960" MinWidth="1280" MinHeight="720"
+        CanResize="True"
+        SystemDecorations="Full"
+        ExtendClientAreaToDecorationsHint="False"
         WindowStartupLocation="CenterScreen">
   <Grid RowDefinitions="Auto,*,34">
     <StackPanel Grid.Row="0">
@@ -34,12 +37,20 @@
           <MenuItem Header="{loc:Localize Key=Menu.View.ZoomOut}" InputGesture="Ctrl+-" Command="{Binding ZoomOutCommand}" IsEnabled="{Binding IsImageLoaded}" />
           <Separator />
           <MenuItem Header="{loc:Localize Key=Menu.View.BeforeAfter}" InputGesture="Ctrl+B" Command="{Binding ToggleComparisonCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.History}" InputGesture="Ctrl+H" Command="{Binding ToggleHistoryPanelCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.Clipping}" InputGesture="Ctrl+Shift+C" Command="{Binding ToggleClippingWarningCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <Separator />
+          <MenuItem Header="{loc:Localize Key=Menu.View.Roi}" InputGesture="Ctrl+R" Command="{Binding ToggleRoiSelectionCommand}" IsEnabled="{Binding IsImageLoaded}" />
+          <MenuItem Header="{loc:Localize Key=Menu.View.ApplyRoi}" InputGesture="Ctrl+Enter" Command="{Binding ApplyRoiToFullImageCommand}" IsEnabled="{Binding IsRoiActive}" />
+          <Separator />
           <MenuItem Header="{loc:Localize Key=Menu.View.FullScreen}" InputGesture="F11" Click="FullScreen_Click" />
           <Separator />
           <MenuItem Header="{loc:Localize Key=Menu.View.Beginner}" InputGesture="F1" Command="{Binding ShowBeginnerCommand}" />
           <MenuItem Header="{loc:Localize Key=Menu.View.Expert}" InputGesture="F2" Command="{Binding ShowExpertCommand}" />
         </MenuItem>
         <MenuItem Header="{loc:Localize Key=Menu.Process}">
+          <MenuItem Header="{loc:Localize Key=Menu.Process.Batch}" InputGesture="Ctrl+Shift+B" Click="OpenBatchProcessing_Click" />
+          <Separator />
           <MenuItem Header="{loc:Localize Key=Menu.Process.Wavelet}" Click="OpenWaveletTool_Click" />
           <MenuItem Header="{loc:Localize Key=Menu.Process.RichardsonLucy}" Click="OpenRichardsonLucyTool_Click" />
           <MenuItem Header="{loc:Localize Key=Menu.Process.NoiseReduction}" Click="OpenNoiseReductionTool_Click" />
@@ -103,6 +114,7 @@
             <Button Classes="command" Content="{loc:Localize Key=Toolbar.SaveShort}" Click="SaveProject_Click" IsEnabled="{Binding IsImageLoaded}" />
             <Button Classes="command" Content="{loc:Localize Key=Toolbar.Undo}" Command="{Binding UndoCommand}" />
             <Button Classes="command subtle" Content="{loc:Localize Key=Toolbar.Redo}" Command="{Binding RedoCommand}" />
+            <Button Classes="command square" Classes.active="{Binding IsHistoryPanelVisible}" Content="◷" Command="{Binding ToggleHistoryPanelCommand}" IsEnabled="{Binding IsImageLoaded}" ToolTip.Tip="{loc:Localize Key=Toolbar.History.Tip}" />
             <Button Classes="command" Content="{loc:Localize Key=Toolbar.Compare}" Command="{Binding ToggleComparisonCommand}" Classes.active="{Binding IsComparisonEnabled}" IsEnabled="{Binding IsImageLoaded}" ToolTip.Tip="{loc:Localize Key=Toolbar.Compare.Tip}" />
           </StackPanel>
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -114,6 +126,7 @@
           <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
             <Border Classes="mode-switch"><StackPanel Orientation="Horizontal" Spacing="2"><Button Classes="mode compact" Classes.active="{Binding IsBeginnerMode}" Content="{loc:Localize Key=Mode.Beginner}" Command="{Binding ShowBeginnerCommand}" /><Button Classes="mode compact" Classes.active="{Binding IsExpertMode}" Content="{loc:Localize Key=Mode.Expert}" Command="{Binding ShowExpertCommand}" /></StackPanel></Border>
             <Button Classes="command" Content="{loc:Localize Key=Toolbar.Performance}" Click="OpenPerformanceSettings_Click" />
+            <Button Classes="primary export" Content="{Binding BatchToolbarText}" Click="OpenBatchProcessing_Click" MinWidth="152" ToolTip.Tip="{Binding BatchToolbarTip}" />
             <Button Classes="primary export" Content="{loc:Localize Key=Toolbar.Export}" Click="Export_Click" IsEnabled="{Binding IsImageLoaded}" />
           </StackPanel>
         </Grid>
@@ -124,10 +137,16 @@
       <Border Grid.Column="0" Classes="viewer-frame">
         <Grid RowDefinitions="43,*">
           <Border Classes="panel-header" CornerRadius="7,7,0,0">
-            <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▧" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" /><TextBlock Grid.Column="1" Text="{loc:Localize Key=Viewer.ImageViewer}" Classes="secondary" FontSize="12" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="header-icon" Content="⌗" Click="FullScreen_Click" ToolTip.Tip="{loc:Localize Key=Viewer.FullScreen.Tip}" /></Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="5">
+              <TextBlock Text="▧" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" />
+              <TextBlock Grid.Column="1" Text="{loc:Localize Key=Viewer.ImageViewer}" Classes="secondary" FontSize="12" VerticalAlignment="Center" />
+              <Button Grid.Column="2" Classes="header-action" Classes.active="{Binding IsClippingWarningEnabled}" Content="{loc:Localize Key=Clipping.Button}" Command="{Binding ToggleClippingWarningCommand}" IsEnabled="{Binding IsImageLoaded}" ToolTip.Tip="{loc:Localize Key=Clipping.Tip}" />
+              <Button Grid.Column="3" Classes="header-action" Classes.active="{Binding IsRoiSelectionEnabled}" Content="{loc:Localize Key=Roi.Button}" Command="{Binding ToggleRoiSelectionCommand}" IsEnabled="{Binding IsImageLoaded}" ToolTip.Tip="{loc:Localize Key=Roi.SelectTip}" />
+              <Button Grid.Column="4" Classes="header-icon" Content="⌗" Click="FullScreen_Click" ToolTip.Tip="{loc:Localize Key=Viewer.FullScreen.Tip}" />
+            </Grid>
           </Border>
           <Grid Grid.Row="1" Background="#000000" ClipToBounds="True">
-            <controls:ImageComparisonViewer Original="{Binding OriginalBitmap}" Processed="{Binding ProcessedBitmap}" OriginalPixels="{Binding OriginalPixels}" ProcessedPixels="{Binding ProcessedPixels}" ChannelCount="{Binding ImageChannelCount}" Fit="{Binding IsFitToViewer}" Zoom="{Binding ZoomFactor}" Compare="{Binding IsComparisonEnabled}" PreviewEnabled="True" Split="{Binding ComparisonSplit}" PixelReadout="{Binding PixelReadout}" IsVisible="{Binding IsImageLoaded}">
+            <controls:ImageComparisonViewer Original="{Binding OriginalBitmap}" Processed="{Binding ProcessedBitmap}" OriginalPixels="{Binding OriginalPixels}" ProcessedPixels="{Binding ProcessedPixels}" ChannelCount="{Binding ImageChannelCount}" Fit="{Binding IsFitToViewer}" Zoom="{Binding ZoomFactor}" Compare="{Binding IsComparisonEnabled}" PreviewEnabled="True" Split="{Binding ComparisonSplit}" PixelReadout="{Binding PixelReadout}" IsClippingWarningEnabled="{Binding IsClippingWarningEnabled}" IsRoiSelectionEnabled="{Binding IsRoiSelectionEnabled}" RoiImageRect="{Binding RoiImageRect, Mode=TwoWay}" IsVisible="{Binding IsImageLoaded}">
               <controls:ImageComparisonViewer.ContextMenu>
                 <ContextMenu>
                   <MenuItem Header="{loc:Localize Key=Context.Undo}" Command="{Binding UndoCommand}" />
@@ -137,6 +156,9 @@
                   <MenuItem Header="{loc:Localize Key=Context.ZoomIn}" Command="{Binding ZoomInCommand}" IsEnabled="{Binding IsImageLoaded}" />
                   <MenuItem Header="{loc:Localize Key=Context.ZoomOut}" Command="{Binding ZoomOutCommand}" IsEnabled="{Binding IsImageLoaded}" />
                   <MenuItem Header="{loc:Localize Key=Context.Compare}" Command="{Binding ToggleComparisonCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <MenuItem Header="{loc:Localize Key=Clipping.Button}" Command="{Binding ToggleClippingWarningCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <MenuItem Header="{loc:Localize Key=Roi.Select}" Command="{Binding ToggleRoiSelectionCommand}" IsEnabled="{Binding IsImageLoaded}" />
+                  <MenuItem Header="{loc:Localize Key=Roi.ApplyFull}" Command="{Binding ApplyRoiToFullImageCommand}" IsEnabled="{Binding IsRoiActive}" />
                   <Separator />
                   <MenuItem Header="{loc:Localize Key=Context.ResetAll}" Command="{Binding ResetAllCommand}" />
                   <MenuItem Header="{loc:Localize Key=Context.Export}" Click="Export_Click" IsEnabled="{Binding IsImageLoaded}" />
@@ -149,6 +171,31 @@
             </StackPanel>
             <Border Classes="image-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20" IsVisible="{Binding IsComparisonEnabled}"><TextBlock Text="{loc:Localize Key=Viewer.Original}" FontSize="10" FontWeight="SemiBold" /></Border>
             <Border Classes="image-badge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20" IsVisible="{Binding IsComparisonEnabled}"><TextBlock Text="{loc:Localize Key=Viewer.Processed}" FontSize="10" FontWeight="SemiBold" /></Border>
+            <Border Classes="roi-status" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14" IsVisible="{Binding IsRoiActive}">
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <StackPanel><TextBlock Text="{loc:Localize Key=Roi.PreviewActive}" FontWeight="SemiBold" FontSize="11" /><TextBlock Text="{Binding RoiSummary}" Classes="muted" FontSize="9" /></StackPanel>
+                <Button Classes="primary compact-action" Content="{loc:Localize Key=Roi.ApplyFull}" Command="{Binding ApplyRoiToFullImageCommand}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="history-panel" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,58,0,0" Width="310" MaxHeight="520" IsVisible="{Binding IsHistoryPanelVisible}">
+              <Grid RowDefinitions="42,*">
+                <Grid ColumnDefinitions="*,Auto" Margin="12,0"><TextBlock Text="{loc:Localize Key=History.Title}" FontWeight="SemiBold" VerticalAlignment="Center" /><Button Grid.Column="1" Classes="header-icon" Content="×" Command="{Binding CloseHistoryPanelCommand}" /></Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="466">
+                  <ItemsControl ItemsSource="{Binding HistoryStates}" Margin="7,0,7,7">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:HistoryStateViewModel">
+                        <Button Classes="history-row" Classes.active="{Binding IsCurrent}" Command="{Binding SelectCommand}">
+                          <Grid ColumnDefinitions="18,*" ColumnSpacing="7">
+                            <TextBlock Text="●" Foreground="{DynamicResource AccentBrush}" FontSize="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="10.5" /><TextBlock Text="{Binding Details}" Classes="muted" FontSize="8.5" /></StackPanel>
+                          </Grid>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Grid>
+            </Border>
             <Border Classes="processing-flyout" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="14" IsVisible="{Binding IsProcessingFeedbackVisible}"><StackPanel Spacing="6"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding ProcessingStatusText}" FontWeight="SemiBold" FontSize="11" /><Button Grid.Column="1" Content="{loc:Localize Key=Processing.Cancel}" Command="{Binding CancelProcessingCommand}" IsEnabled="{Binding CanCancelProcessing}" Padding="8,2" MinHeight="26" /></Grid><ProgressBar Width="310" Minimum="0" Maximum="100" Value="{Binding ProcessingPercent}" IsIndeterminate="{Binding IsProcessingIndeterminate}" /></StackPanel></Border>
             <Border Classes="processing-flyout" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsBusy}"><StackPanel Orientation="Horizontal" Spacing="10"><ProgressBar Width="90" IsIndeterminate="True" /><TextBlock Text="{loc:Localize Key=Processing.OpeningImage}" /></StackPanel></Border>
             <Border Background="#24151AF5" BorderBrush="#D85A6A" BorderThickness="1" CornerRadius="8" Padding="14" Margin="16" MaxWidth="700" HorizontalAlignment="Center" VerticalAlignment="Bottom" IsVisible="{Binding IsProcessingErrorVisible}"><StackPanel Spacing="7"><Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{loc:Localize Key=Error.ProcessingFailed}" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="{Binding ProcessingErrorMessage}" TextWrapping="Wrap" /><TextBlock Text="{Binding ProcessingErrorCode}" Classes="muted" /></StackPanel><Button Grid.Column="1" Content="×" Command="{Binding DismissProcessingErrorCommand}" /></Grid><Expander Header="{loc:Localize Key=Error.TechnicalDetails}" IsVisible="{Binding ShowTechnicalDiagnostics}"><StackPanel><TextBox Text="{Binding ProcessingErrorTechnicalDetails}" IsReadOnly="True" AcceptsReturn="True" MaxHeight="180" FontFamily="Consolas" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="{loc:Localize Key=Error.CopyDetails}" Command="{Binding CopyErrorDetailsCommand}" /><Button Content="{loc:Localize Key=Error.OpenLogFolder}" Command="{Binding OpenLogFolderCommand}" /></StackPanel></StackPanel></Expander></StackPanel></Border>

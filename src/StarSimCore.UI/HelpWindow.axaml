@@ -58,6 +58,36 @@
                 <TextBlock Text="{loc:Localize Key=Help.About.Input}" TextWrapping="Wrap" />
               </StackPanel>
             </Border>
+            <Border Classes="module-card" Padding="15">
+              <StackPanel Spacing="9">
+                <TextBlock Text="{loc:Localize Key=Help.Shortcuts.Title}" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Localize Key=Help.Shortcuts.Intro}" Classes="secondary" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding Shortcuts}" Margin="0,4,0,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:HelpShortcutViewModel">
+                      <Border BorderBrush="#183247" BorderThickness="0,0,0,1" Padding="2,6">
+                        <Grid ColumnDefinitions="190,*" ColumnSpacing="12">
+                          <Border Background="#07131D" BorderBrush="#28506A" BorderThickness="1" CornerRadius="4" Padding="8,3" HorizontalAlignment="Left" MinWidth="170">
+                            <TextBlock Text="{Binding Gesture}" FontFamily="Consolas" Foreground="#83CCFA" FontWeight="SemiBold" />
+                          </Border>
+                          <TextBlock Grid.Column="1" Text="{Binding Action}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+            <Border Classes="module-card" Padding="15">
+              <StackPanel Spacing="7">
+                <TextBlock Text="{loc:Localize Key=Help.Batch.Title}" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Localize Key=Help.Batch.Body}" Classes="secondary" TextWrapping="Wrap" />
+                <TextBlock Text="{loc:Localize Key=Help.Batch.Step1}" TextWrapping="Wrap" />
+                <TextBlock Text="{loc:Localize Key=Help.Batch.Step2}" TextWrapping="Wrap" />
+                <TextBlock Text="{loc:Localize Key=Help.Batch.Step3}" TextWrapping="Wrap" />
+                <TextBlock Text="{loc:Localize Key=Help.Batch.Safety}" Foreground="#9CC8E5" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
             <Border Background="#2A210F" BorderBrush="#E5A93C" BorderThickness="1" CornerRadius="7" Padding="13,10">
               <TextBlock Text="{loc:Localize Key=Help.About.Safety}" Foreground="#F5C467" TextWrapping="Wrap" />
             </Border>
